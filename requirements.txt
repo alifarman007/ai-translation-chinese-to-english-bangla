@@ -1,0 +1,11 @@
+google-cloud-speech
+google-cloud-translate
+google-cloud-texttospeech
+python-dotenv
+
+requests
+
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
