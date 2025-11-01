@@ -6,8 +6,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.Python
 venv/
 env/
+*.pyc
 
 # Uploads and outputs
 uploads/*
@@ -23,3 +25,8 @@ outputs/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Credentials
+credentials/
+*.json
+API_KEY.txt
