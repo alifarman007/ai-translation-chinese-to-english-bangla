@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -19,7 +20,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to specific origins in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,6 +35,11 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 # Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+os.makedirs('static', exist_ok=True)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 
 # Initialize pipeline
 pipeline = None
@@ -70,7 +76,13 @@ def allowed_file(filename: str) -> bool:
 
 @app.get("/", tags=["Info"])
 async def root():
-    """API home page"""
+    """Serve the web interface"""
+    return FileResponse('static/index.html')
+
+
+@app.get("/api", tags=["Info"])
+async def api_info():
+    """API information"""
     return {
         "service": "Chinese to English/Bangla Translation API",
         "version": "1.0.0",
@@ -168,9 +180,6 @@ async def translate_voice(
             target_languages=['en', 'bn']
         )
         
-        # Clean up uploaded file (optional)
-        # os.remove(file_path)  # Uncomment to auto-delete
-        
         # Prepare response
         if result['success']:
             response = {
@@ -191,12 +200,12 @@ async def translate_voice(
                 if translation['success']:
                     response['translations'][lang_name] = translation['text']
             
-            # Add audio file download URLs
+            # Add audio file URLs
             for lang_name, audio_info in result['audio_outputs'].items():
                 if audio_info['success']:
                     audio_filename = os.path.basename(audio_info['audio_path'])
                     response['audio_files'][lang_name] = {
-                        "url": f"/download/{audio_filename}",
+                        "url": f"/outputs/{audio_filename}",
                         "size_kb": audio_info['file_size']
                     }
             
@@ -292,7 +301,7 @@ async def translate_text(request: TranslateTextRequest):
                 if audio_info['success']:
                     audio_filename = os.path.basename(audio_info['audio_path'])
                     response['audio_files'][lang_name] = {
-                        "url": f"/download/{audio_filename}",
+                        "url": f"/outputs/{audio_filename}",
                         "size_kb": audio_info['file_size']
                     }
         
@@ -356,6 +365,7 @@ if __name__ == "__main__":
     print("🚀 CHINESE TRANSLATION API SERVER (FastAPI)")
     print("="*60)
     print("Server starting...")
+    print("Web Interface: http://localhost:8000")
     print("API Documentation: http://localhost:8000/docs")
     print("Alternative Docs: http://localhost:8000/redoc")
     print("="*60)
@@ -364,5 +374,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True  # Auto-reload on code changes
+        reload=True
     )

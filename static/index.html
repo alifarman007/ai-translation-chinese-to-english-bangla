@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Translation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #667eea;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+
+        .upload-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .recording-indicator {
+            display: none;
+            margin-top: 15px;
+            padding: 10px;
+            background: #ff4444;
+            color: white;
+            border-radius: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .recording-indicator.active {
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-card.chinese {
+            border-left-color: #dc3545;
+        }
+
+        .result-card.english {
+            border-left-color: #28a745;
+        }
+
+        .result-card.bangla {
+            border-left-color: #17a2b8;
+        }
+
+        .result-card h4 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .result-card p {
+            color: #555;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .confidence {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .error {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .success {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c3e6cb;
+        }
+
+        .success.active {
+            display: block;
+        }
+
+        .processing-time {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Chinese Translation System</h1>
+            <p>Translate Chinese audio to English and Bangla with voice output</p>
+        </div>
+
+        <div class="content">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h3>Upload Audio or Record</h3>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        Choose Audio File
+                    </button>
+                    <button class="btn btn-secondary" id="recordBtn" onclick="toggleRecording()">
+                        Start Recording
+                    </button>
+                    <button class="btn btn-primary" id="translateBtn" onclick="translateAudio()" disabled>
+                        Translate
+                    </button>
+                </div>
+
+                <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac" onchange="handleFileSelect(event)">
+                
+                <div class="file-info" id="fileInfo"></div>
+                <div class="recording-indicator" id="recordingIndicator">
+                    🔴 Recording... Click "Stop Recording" when done
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error" id="errorMsg"></div>
+
+            <!-- Success Message -->
+            <div class="success" id="successMsg"></div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing your audio... This may take a few seconds.</p>
+            </div>
+
+            <!-- Results -->
+            <div class="results" id="results">
+                <!-- Original Chinese -->
+                <div class="result-card chinese">
+                    <h4>🇨🇳 Original (Chinese)</h4>
+                    <p id="chineseText"></p>
+                    <span class="confidence" id="confidence"></span>
+                </div>
+
+                <!-- English Translation -->
+                <div class="result-card english">
+                    <h4>🇬🇧 English Translation</h4>
+                    <p id="englishText"></p>
+                    <div class="audio-controls">
+                        <button class="btn btn-success" onclick="playAudio('english')">
+                            ▶ Play
+                        </button>
+                        <button class="btn btn-success" onclick="downloadAudio('english')">
+                            ⬇ Download
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bangla Translation -->
+                <div class="result-card bangla">
+                    <h4>🇧🇩 Bangla Translation</h4>
+                    <p id="banglaText"></p>
+                    <div class="audio-controls">
+                        <button class="btn btn-success" onclick="playAudio('bangla')">
+                            ▶ Play
+                        </button>
+                        <button class="btn btn-success" onclick="downloadAudio('bangla')">
+                            ⬇ Download
+                        </button>
+                    </div>
+                </div>
+
+                <div class="processing-time" id="processingTime"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden audio players -->
+    <audio id="englishAudio" style="display: none;"></audio>
+    <audio id="banglaAudio" style="display: none;"></audio>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let selectedFile = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioUrls = {};
+
+        // Handle file selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('fileInfo').textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                document.getElementById('translateBtn').disabled = false;
+                hideMessages();
+            }
+        }
+
+        // Toggle recording
+        async function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            const indicator = document.getElementById('recordingIndicator');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        selectedFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+                        document.getElementById('fileInfo').textContent = `Recorded: ${(selectedFile.size / 1024).toFixed(2)} KB`;
+                        document.getElementById('translateBtn').disabled = false;
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordBtn.textContent = 'Stop Recording';
+                    recordBtn.classList.remove('btn-secondary');
+                    recordBtn.classList.add('btn-primary');
+                    indicator.classList.add('active');
+                } catch (error) {
+                    showError('Could not access microphone: ' + error.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                recordBtn.textContent = 'Start Recording';
+                recordBtn.classList.remove('btn-primary');
+                recordBtn.classList.add('btn-secondary');
+                indicator.classList.remove('active');
+            }
+        }
+
+        // Translate audio
+        async function translateAudio() {
+            if (!selectedFile) {
+                showError('Please select or record an audio file first');
+                return;
+            }
+
+            hideMessages();
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('translateBtn').disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/translate-voice`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                    showSuccess('Translation completed successfully!');
+                } else {
+                    showError(data.error || 'Translation failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('translateBtn').disabled = false;
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            console.log('Results:', data);
+            
+            // Chinese text
+            document.getElementById('chineseText').textContent = data.transcription.text;
+            document.getElementById('confidence').textContent = `Confidence: ${(data.transcription.confidence * 100).toFixed(1)}%`;
+
+            // English translation
+            document.getElementById('englishText').textContent = data.translations.english;
+            audioUrls.english = data.audio_files.english.url;
+            console.log('English audio URL:', audioUrls.english);
+
+            // Bangla translation
+            document.getElementById('banglaText').textContent = data.translations.bangla;
+            audioUrls.bangla = data.audio_files.bangla.url;
+            console.log('Bangla audio URL:', audioUrls.bangla);
+
+            // Processing time
+            document.getElementById('processingTime').textContent = 
+                `Processing completed in ${data.processing_time.toFixed(2)} seconds`;
+
+            // Show results
+            document.getElementById('results').classList.add('active');
+        }
+
+        // Play audio
+        function playAudio(language) {
+            const audioPlayer = document.getElementById(`${language}Audio`);
+            const audioUrl = `${API_BASE_URL}${audioUrls[language]}`;
+            
+            console.log('Playing audio from:', audioUrl);
+            
+            audioPlayer.src = audioUrl;
+            audioPlayer.load();
+            
+            audioPlayer.play()
+                .then(() => {
+                    console.log('Audio playing successfully');
+                })
+                .catch(error => {
+                    console.error('Error playing audio:', error);
+                    showError('Could not play audio. Try downloading instead.');
+                });
+        }
+
+        // Download audio
+        function downloadAudio(language) {
+            const url = `${API_BASE_URL}${audioUrls[language]}`;
+            
+            console.log('Downloading audio from:', url);
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Download failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = `translation_${language}.mp3`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(blobUrl);
+                    console.log('Download successful');
+                })
+                .catch(error => {
+                    console.error('Download error:', error);
+                    showError('Could not download audio: ' + error.message);
+                });
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMsg');
+            errorDiv.textContent = '❌ ' + message;
+            errorDiv.classList.add('active');
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMsg');
+            successDiv.textContent = '✅ ' + message;
+            successDiv.classList.add('active');
+        }
+
+        // Hide messages
+        function hideMessages() {
+            document.getElementById('errorMsg').classList.remove('active');
+            document.getElementById('successMsg').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
