@@ -57,8 +57,9 @@ class TextToSpeech:
             else:
                 # Use default voices
                 default_voices = {
-                    'en-US': 'en-US-Neural2-C',  # Female voice
-                    'bn-IN': 'bn-IN-Standard-A',  # Bangla female voice
+                    'en-US': 'en-US-Neural2-C',  # English female neural voice
+                    'bn-IN': 'bn-IN-Standard-A',  # Bangla female standard voice
+                    'zh-CN': 'cmn-CN-Wavenet-A',  # Chinese Mandarin female wavenet voice
                 }
                 if language_code in default_voices:
                     voice_config["name"] = default_voices[language_code]
@@ -160,7 +161,9 @@ class TextToSpeech:
         
         language_map = {
             'en': 'en-US',
-            'bn': 'bn-IN'
+            'bn': 'bn-IN',
+            'zh': 'zh-CN',
+            'zh-CN': 'zh-CN'
         }
         
         for lang_name, translation in translations_dict.items():
