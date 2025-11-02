@@ -97,46 +97,60 @@ class Translator:
     def translate_to_multiple(self, text, target_languages=['en', 'bn'], source_language='zh-CN'):
         """
         Translate text to multiple languages
-        
+
         Args:
             text (str): Text to translate
             target_languages (list): List of target language codes
             source_language (str): Source language code
-            
+
         Returns:
             dict: Translations for all target languages
         """
-        print(f"\n[Translator] Translating Chinese text to {len(target_languages)} languages...")
+        # Get source language name
+        source_lang_name = {
+            'zh-CN': 'Chinese',
+            'zh': 'Chinese',
+            'en': 'English',
+            'en-US': 'English',
+            'bn': 'Bangla',
+            'bn-IN': 'Bangla'
+        }.get(source_language, source_language)
+
+        print(f"\n[Translator] Translating {source_lang_name} text to {len(target_languages)} languages...")
         print(f"[Translator] Source text: {text}")
-        
+
         results = {}
         all_success = True
-        
+
         for lang in target_languages:
             lang_name = {
-                'en': 'English',
-                'bn': 'Bangla'
+                'en': 'english',
+                'en-US': 'english',
+                'bn': 'bangla',
+                'bn-IN': 'bangla',
+                'zh': 'chinese',
+                'zh-CN': 'chinese'
             }.get(lang, lang)
-            
-            print(f"\n[Translator] → Translating to {lang_name} ({lang})...")
-            
+
+            print(f"\n[Translator] → Translating to {lang_name.capitalize()} ({lang})...")
+
             result = self.translate_text(text, lang, source_language)
-            
+
             if result['success']:
-                results[lang_name.lower()] = {
+                results[lang_name] = {
                     'text': result['translated_text'],
                     'language_code': lang,
                     'success': True
                 }
             else:
-                results[lang_name.lower()] = {
+                results[lang_name] = {
                     'text': '',
                     'language_code': lang,
                     'success': False,
                     'error': result['error']
                 }
                 all_success = False
-        
+
         return {
             'success': all_success,
             'translations': results,

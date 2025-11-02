@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chinese Translation System</title>
+    <title>Multilingual Translation System</title>
     <style>
         * {
             margin: 0;
@@ -16,14 +16,11 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
         .container {
-            max-width: 900px;
-            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -38,38 +35,173 @@
         }
 
         .header h1 {
-            font-size: 28px;
+            font-size: 32px;
             margin-bottom: 10px;
         }
 
         .header p {
-            font-size: 14px;
-            opacity: 0.9;
+            font-size: 16px;
+            opacity: 0.95;
         }
 
         .content {
             padding: 40px;
         }
 
-        .upload-section {
+        /* Language Selection */
+        .language-selector {
             background: #f8f9fa;
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
-            border: 2px dashed #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .language-selector h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
             text-align: center;
+        }
+
+        .language-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .language-box {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        .language-box label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .language-box select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
             transition: all 0.3s;
         }
 
-        .upload-section:hover {
-            border-color: #764ba2;
-            background: #f0f1ff;
+        .language-box select:focus {
+            outline: none;
+            border-color: #667eea;
         }
 
-        .upload-section h3 {
+        .swap-btn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .swap-btn:hover {
+            background: #764ba2;
+            transform: rotate(180deg);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 30px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 16px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab:hover {
+            color: #764ba2;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Input Sections */
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-section h3 {
             color: #333;
             margin-bottom: 20px;
             font-size: 18px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
         }
 
         .button-group {
@@ -77,6 +209,7 @@
             gap: 15px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 20px;
         }
 
         .btn {
@@ -87,9 +220,6 @@
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .btn-primary {
@@ -157,6 +287,36 @@
             display: block;
         }
 
+        /* Messages */
+        .error {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .success {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c3e6cb;
+        }
+
+        .success.active {
+            display: block;
+        }
+
+        /* Loading */
         .loading {
             display: none;
             text-align: center;
@@ -182,6 +342,7 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Results */
         .results {
             display: none;
             margin-top: 30px;
@@ -199,16 +360,12 @@
             border-left: 4px solid #667eea;
         }
 
-        .result-card.chinese {
+        .result-card.source {
             border-left-color: #dc3545;
         }
 
-        .result-card.english {
+        .result-card.target {
             border-left-color: #28a745;
-        }
-
-        .result-card.bangla {
-            border-left-color: #17a2b8;
         }
 
         .result-card h4 {
@@ -242,34 +399,6 @@
             flex-wrap: wrap;
         }
 
-        .error {
-            display: none;
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #f5c6cb;
-        }
-
-        .error.active {
-            display: block;
-        }
-
-        .success {
-            display: none;
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #c3e6cb;
-        }
-
-        .success.active {
-            display: block;
-        }
-
         .processing-time {
             text-align: center;
             color: #666;
@@ -286,6 +415,14 @@
                 padding: 20px;
             }
 
+            .language-row {
+                flex-direction: column;
+            }
+
+            .swap-btn {
+                transform: rotate(90deg);
+            }
+
             .button-group {
                 flex-direction: column;
             }
@@ -299,33 +436,41 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌐 Chinese Translation System</h1>
-            <p>Translate Chinese audio to English and Bangla with voice output</p>
+            <h1>🌐 Multilingual Translation System</h1>
+            <p>Bidirectional translation: Chinese ⇄ English ⇄ Bangla</p>
         </div>
 
         <div class="content">
-            <!-- Upload Section -->
-            <div class="upload-section">
-                <h3>Upload Audio or Record</h3>
-                
-                <div class="button-group">
-                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                        Choose Audio File
-                    </button>
-                    <button class="btn btn-secondary" id="recordBtn" onclick="toggleRecording()">
-                        Start Recording
-                    </button>
-                    <button class="btn btn-primary" id="translateBtn" onclick="translateAudio()" disabled>
-                        Translate
-                    </button>
-                </div>
+            <!-- Language Selection -->
+            <div class="language-selector">
+                <h3>Select Languages</h3>
+                <div class="language-row">
+                    <div class="language-box">
+                        <label>Source Language</label>
+                        <select id="sourceLanguage" onchange="updateUI()">
+                            <option value="zh-CN">🇨🇳 Chinese (Mandarin)</option>
+                            <option value="en">🇬🇧 English</option>
+                            <option value="bn">🇧🇩 Bangla</option>
+                        </select>
+                    </div>
 
-                <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac" onchange="handleFileSelect(event)">
-                
-                <div class="file-info" id="fileInfo"></div>
-                <div class="recording-indicator" id="recordingIndicator">
-                    🔴 Recording... Click "Stop Recording" when done
+                    <button class="swap-btn" onclick="swapLanguages()" title="Swap languages">⇄</button>
+
+                    <div class="language-box">
+                        <label>Target Language</label>
+                        <select id="targetLanguage" onchange="updateUI()">
+                            <option value="en">🇬🇧 English</option>
+                            <option value="bn">🇧🇩 Bangla</option>
+                            <option value="zh">🇨🇳 Chinese (Mandarin)</option>
+                        </select>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('text')">Text Translation</button>
+                <button class="tab" onclick="switchTab('voice')">Voice Translation</button>
             </div>
 
             <!-- Error Message -->
@@ -334,57 +479,62 @@
             <!-- Success Message -->
             <div class="success" id="successMsg"></div>
 
+            <!-- Text Translation Tab -->
+            <div class="tab-content active" id="textTab">
+                <div class="input-section">
+                    <h3>Enter Text</h3>
+                    <textarea id="textInput" placeholder="Enter text to translate..."></textarea>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="translateText()">
+                            Translate Text
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Translation Tab -->
+            <div class="tab-content" id="voiceTab">
+                <div class="input-section">
+                    <h3>Upload Audio or Record</h3>
+                    <div class="upload-area">
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                Choose Audio File
+                            </button>
+                            <button class="btn btn-secondary" id="recordBtn" onclick="toggleRecording()">
+                                Start Recording
+                            </button>
+                            <button class="btn btn-primary" id="translateBtn" onclick="translateAudio()" disabled>
+                                Translate Audio
+                            </button>
+                        </div>
+
+                        <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac" onchange="handleFileSelect(event)">
+
+                        <div class="file-info" id="fileInfo"></div>
+                        <div class="recording-indicator" id="recordingIndicator">
+                            🔴 Recording... Click "Stop Recording" when done
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Loading -->
             <div class="loading" id="loading">
                 <div class="spinner"></div>
-                <p>Processing your audio... This may take a few seconds.</p>
+                <p id="loadingText">Processing... This may take a few seconds.</p>
             </div>
 
             <!-- Results -->
             <div class="results" id="results">
-                <!-- Original Chinese -->
-                <div class="result-card chinese">
-                    <h4>🇨🇳 Original (Chinese)</h4>
-                    <p id="chineseText"></p>
-                    <span class="confidence" id="confidence"></span>
-                </div>
-
-                <!-- English Translation -->
-                <div class="result-card english">
-                    <h4>🇬🇧 English Translation</h4>
-                    <p id="englishText"></p>
-                    <div class="audio-controls">
-                        <button class="btn btn-success" onclick="playAudio('english')">
-                            ▶ Play
-                        </button>
-                        <button class="btn btn-success" onclick="downloadAudio('english')">
-                            ⬇ Download
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Bangla Translation -->
-                <div class="result-card bangla">
-                    <h4>🇧🇩 Bangla Translation</h4>
-                    <p id="banglaText"></p>
-                    <div class="audio-controls">
-                        <button class="btn btn-success" onclick="playAudio('bangla')">
-                            ▶ Play
-                        </button>
-                        <button class="btn btn-success" onclick="downloadAudio('bangla')">
-                            ⬇ Download
-                        </button>
-                    </div>
-                </div>
-
+                <div id="resultsContainer"></div>
                 <div class="processing-time" id="processingTime"></div>
             </div>
         </div>
     </div>
 
     <!-- Hidden audio players -->
-    <audio id="englishAudio" style="display: none;"></audio>
-    <audio id="banglaAudio" style="display: none;"></audio>
+    <div id="audioPlayers"></div>
 
     <script>
         const API_BASE_URL = 'http://localhost:8000';
@@ -393,6 +543,68 @@
         let audioChunks = [];
         let isRecording = false;
         let audioUrls = {};
+
+        const languageNames = {
+            'zh-CN': 'Chinese',
+            'zh': 'Chinese',
+            'en': 'English',
+            'bn': 'Bangla'
+        };
+
+        const languageFlags = {
+            'zh-CN': '🇨🇳',
+            'zh': '🇨🇳',
+            'en': '🇬🇧',
+            'bn': '🇧🇩'
+        };
+
+        // Update UI based on language selection
+        function updateUI() {
+            const sourceLang = document.getElementById('sourceLanguage').value;
+            const targetLang = document.getElementById('targetLanguage').value;
+
+            // Prevent same source and target
+            if (sourceLang === targetLang || (sourceLang === 'zh-CN' && targetLang === 'zh')) {
+                // Auto-switch target to a different language
+                const targetSelect = document.getElementById('targetLanguage');
+                for (let option of targetSelect.options) {
+                    if (option.value !== sourceLang && option.value !== 'zh') {
+                        targetSelect.value = option.value;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Swap source and target languages
+        function swapLanguages() {
+            const sourceSelect = document.getElementById('sourceLanguage');
+            const targetSelect = document.getElementById('targetLanguage');
+
+            const sourceLang = sourceSelect.value;
+            const targetLang = targetSelect.value;
+
+            // Map zh to zh-CN for source
+            const mappedTarget = targetLang === 'zh' ? 'zh-CN' : targetLang;
+            const mappedSource = sourceLang === 'zh-CN' ? 'zh' : sourceLang;
+
+            sourceSelect.value = mappedTarget;
+            targetSelect.value = mappedSource;
+
+            updateUI();
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            hideMessages();
+            document.getElementById('results').classList.remove('active');
+        }
 
         // Handle file selection
         function handleFileSelect(event) {
@@ -447,6 +659,51 @@
             }
         }
 
+        // Translate text
+        async function translateText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                showError('Please enter text to translate');
+                return;
+            }
+
+            const sourceLang = document.getElementById('sourceLanguage').value;
+            const targetLang = document.getElementById('targetLanguage').value;
+
+            hideMessages();
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('loadingText').textContent = 'Translating and generating audio...';
+            document.getElementById('results').classList.remove('active');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/translate-text`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        source_language: sourceLang,
+                        target_languages: [targetLang],
+                        generate_audio: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayTextResults(data, sourceLang, targetLang);
+                    showSuccess('Translation completed successfully!');
+                } else {
+                    showError(data.error || 'Translation failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
         // Translate audio
         async function translateAudio() {
             if (!selectedFile) {
@@ -454,13 +711,19 @@
                 return;
             }
 
+            const sourceLang = document.getElementById('sourceLanguage').value;
+            const targetLang = document.getElementById('targetLanguage').value;
+
             hideMessages();
             document.getElementById('loading').classList.add('active');
+            document.getElementById('loadingText').textContent = 'Processing audio... This may take a few seconds.';
             document.getElementById('results').classList.remove('active');
             document.getElementById('translateBtn').disabled = true;
 
             const formData = new FormData();
             formData.append('file', selectedFile);
+            formData.append('source_language', sourceLang);
+            formData.append('target_languages', targetLang);
 
             try {
                 const response = await fetch(`${API_BASE_URL}/translate-voice`, {
@@ -471,7 +734,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    displayResults(data);
+                    displayVoiceResults(data, sourceLang, targetLang);
                     showSuccess('Translation completed successfully!');
                 } else {
                     showError(data.error || 'Translation failed');
@@ -484,46 +747,134 @@
             }
         }
 
-        // Display results
-        function displayResults(data) {
-            console.log('Results:', data);
-            
-            // Chinese text
-            document.getElementById('chineseText').textContent = data.transcription.text;
-            document.getElementById('confidence').textContent = `Confidence: ${(data.transcription.confidence * 100).toFixed(1)}%`;
+        // Display text translation results
+        function displayTextResults(data, sourceLang, targetLang) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+            audioUrls = {};
 
-            // English translation
-            document.getElementById('englishText').textContent = data.translations.english;
-            audioUrls.english = data.audio_files.english.url;
-            console.log('English audio URL:', audioUrls.english);
+            const sourceName = languageNames[sourceLang];
+            const sourceFlag = languageFlags[sourceLang];
 
-            // Bangla translation
-            document.getElementById('banglaText').textContent = data.translations.bangla;
-            audioUrls.bangla = data.audio_files.bangla.url;
-            console.log('Bangla audio URL:', audioUrls.bangla);
+            // Source text card
+            const sourceCard = document.createElement('div');
+            sourceCard.className = 'result-card source';
+            sourceCard.innerHTML = `
+                <h4>${sourceFlag} Original (${sourceName})</h4>
+                <p>${data.original_text}</p>
+            `;
+            container.appendChild(sourceCard);
+
+            // Translation results
+            for (let [langKey, translation] of Object.entries(data.translations)) {
+                const targetName = languageNames[targetLang];
+                const targetFlag = languageFlags[targetLang];
+
+                const card = document.createElement('div');
+                card.className = 'result-card target';
+
+                let audioControls = '';
+                if (data.audio_files && data.audio_files[langKey]) {
+                    audioUrls[langKey] = data.audio_files[langKey].url;
+                    audioControls = `
+                        <div class="audio-controls">
+                            <button class="btn btn-success" onclick="playAudio('${langKey}')">
+                                ▶ Play
+                            </button>
+                            <button class="btn btn-success" onclick="downloadAudio('${langKey}')">
+                                ⬇ Download
+                            </button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <h4>${targetFlag} ${targetName} Translation</h4>
+                    <p>${translation}</p>
+                    ${audioControls}
+                `;
+                container.appendChild(card);
+            }
+
+            document.getElementById('results').classList.add('active');
+        }
+
+        // Display voice translation results
+        function displayVoiceResults(data, sourceLang, targetLang) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+            audioUrls = {};
+
+            const sourceName = languageNames[sourceLang];
+            const sourceFlag = languageFlags[sourceLang];
+
+            // Transcription card
+            const sourceCard = document.createElement('div');
+            sourceCard.className = 'result-card source';
+            sourceCard.innerHTML = `
+                <h4>${sourceFlag} Original (${sourceName})</h4>
+                <p>${data.transcription.text}</p>
+                <span class="confidence">Confidence: ${(data.transcription.confidence * 100).toFixed(1)}%</span>
+            `;
+            container.appendChild(sourceCard);
+
+            // Translation results
+            for (let [langKey, translation] of Object.entries(data.translations)) {
+                const targetName = languageNames[targetLang];
+                const targetFlag = languageFlags[targetLang];
+
+                const card = document.createElement('div');
+                card.className = 'result-card target';
+
+                let audioControls = '';
+                if (data.audio_files && data.audio_files[langKey]) {
+                    audioUrls[langKey] = data.audio_files[langKey].url;
+                    audioControls = `
+                        <div class="audio-controls">
+                            <button class="btn btn-success" onclick="playAudio('${langKey}')">
+                                ▶ Play
+                            </button>
+                            <button class="btn btn-success" onclick="downloadAudio('${langKey}')">
+                                ⬇ Download
+                            </button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <h4>${targetFlag} ${targetName} Translation</h4>
+                    <p>${translation}</p>
+                    ${audioControls}
+                `;
+                container.appendChild(card);
+            }
 
             // Processing time
-            document.getElementById('processingTime').textContent = 
-                `Processing completed in ${data.processing_time.toFixed(2)} seconds`;
+            if (data.processing_time) {
+                document.getElementById('processingTime').textContent =
+                    `Processing completed in ${data.processing_time.toFixed(2)} seconds`;
+            }
 
-            // Show results
             document.getElementById('results').classList.add('active');
         }
 
         // Play audio
         function playAudio(language) {
-            const audioPlayer = document.getElementById(`${language}Audio`);
             const audioUrl = `${API_BASE_URL}${audioUrls[language]}`;
-            
-            console.log('Playing audio from:', audioUrl);
-            
+
+            // Create or get audio element
+            let audioPlayer = document.getElementById(`audio_${language}`);
+            if (!audioPlayer) {
+                audioPlayer = document.createElement('audio');
+                audioPlayer.id = `audio_${language}`;
+                document.getElementById('audioPlayers').appendChild(audioPlayer);
+            }
+
             audioPlayer.src = audioUrl;
             audioPlayer.load();
-            
+
             audioPlayer.play()
-                .then(() => {
-                    console.log('Audio playing successfully');
-                })
+                .then(() => console.log('Audio playing'))
                 .catch(error => {
                     console.error('Error playing audio:', error);
                     showError('Could not play audio. Try downloading instead.');
@@ -533,14 +884,10 @@
         // Download audio
         function downloadAudio(language) {
             const url = `${API_BASE_URL}${audioUrls[language]}`;
-            
-            console.log('Downloading audio from:', url);
-            
+
             fetch(url)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Download failed');
-                    }
+                    if (!response.ok) throw new Error('Download failed');
                     return response.blob();
                 })
                 .then(blob => {
@@ -552,7 +899,6 @@
                     a.click();
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(blobUrl);
-                    console.log('Download successful');
                 })
                 .catch(error => {
                     console.error('Download error:', error);
@@ -579,6 +925,9 @@
             document.getElementById('errorMsg').classList.remove('active');
             document.getElementById('successMsg').classList.remove('active');
         }
+
+        // Initialize
+        updateUI();
     </script>
 </body>
 </html>

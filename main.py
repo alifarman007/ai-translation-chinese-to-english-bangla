@@ -12,9 +12,9 @@ from src.pipeline import TranslationPipeline
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Chinese Translation API",
-    description="Translate Chinese voice to English and Bangla with audio output",
-    version="1.0.0"
+    title="Multilingual Translation API",
+    description="Bidirectional translation between Chinese, English, and Bangla with speech-to-text and text-to-speech",
+    version="2.0.0"
 )
 
 # CORS configuration
@@ -60,6 +60,7 @@ async def startup_event():
 class TranslateTextRequest(BaseModel):
     text: str
     source_language: Optional[str] = "zh-CN"
+    target_languages: Optional[list] = ["en", "bn"]
     generate_audio: Optional[bool] = True
 
 
@@ -84,13 +85,18 @@ async def root():
 async def api_info():
     """API information"""
     return {
-        "service": "Chinese to English/Bangla Translation API",
-        "version": "1.0.0",
+        "service": "Multilingual Translation API (Chinese ⇄ English ⇄ Bangla)",
+        "version": "2.0.0",
         "status": "running",
         "documentation": "/docs",
+        "supported_languages": {
+            "zh-CN": "Chinese (Mandarin)",
+            "en": "English",
+            "bn": "Bangla"
+        },
         "endpoints": {
-            "POST /translate-voice": "Upload Chinese audio for translation",
-            "POST /translate-text": "Translate Chinese text directly",
+            "POST /translate-voice": "Upload audio for bidirectional translation",
+            "POST /translate-text": "Translate text in any direction",
             "GET /health": "Check API health",
             "GET /download/{filename}": "Download generated audio files"
         }
@@ -116,18 +122,20 @@ async def health_check():
 @app.post("/translate-voice", tags=["Translation"])
 async def translate_voice(
     file: UploadFile = File(...),
-    source_language: Optional[str] = Form("zh-CN")
+    source_language: Optional[str] = Form("zh-CN"),
+    target_languages: Optional[str] = Form("en,bn")
 ):
     """
-    Upload Chinese audio file and get translations with audio outputs
-    
+    Upload audio file and get translations with audio outputs
+
     **Parameters:**
     - **file**: Audio file (WAV, MP3, or FLAC) - Max 10MB
-    - **source_language**: Source language code (default: zh-CN for Mandarin)
-    
+    - **source_language**: Source language code (default: zh-CN for Chinese; also supports en, bn)
+    - **target_languages**: Comma-separated target language codes (default: en,bn; supports en, bn, zh)
+
     **Returns:**
-    - Transcription of original Chinese audio
-    - English and Bangla translations
+    - Transcription of original audio
+    - Translations to target languages
     - URLs to download generated audio files
     - Processing time and metadata
     """
@@ -172,12 +180,15 @@ async def translate_voice(
             )
         
         print(f"[API] File uploaded: {unique_filename} ({file_size / 1024:.2f} KB)")
-        
+
+        # Parse target languages
+        target_langs = [lang.strip() for lang in target_languages.split(',')]
+
         # Process through pipeline
         result = pipeline.process_audio(
             audio_file_path=file_path,
             source_language=source_language,
-            target_languages=['en', 'bn']
+            target_languages=target_langs
         )
         
         # Prepare response
@@ -239,19 +250,20 @@ async def translate_voice(
 @app.post("/translate-text", tags=["Translation"])
 async def translate_text(request: TranslateTextRequest):
     """
-    Translate Chinese text directly (without audio input)
-    
+    Translate text directly (without audio input)
+
     **Request Body:**
 ```json
     {
-        "text": "你好世界",
-        "source_language": "zh-CN",
+        "text": "hello world",
+        "source_language": "en",
+        "target_languages": ["zh"],
         "generate_audio": true
     }
 ```
-    
+
     **Returns:**
-    - English and Bangla translations
+    - Translations to target languages
     - URLs to download generated audio (if generate_audio=true)
     """
     
@@ -264,20 +276,22 @@ async def translate_text(request: TranslateTextRequest):
     try:
         text = request.text
         source_language = request.source_language
+        target_languages = request.target_languages
         generate_audio = request.generate_audio
-        
+
         if not text:
             raise HTTPException(
                 status_code=400,
                 detail="Text field cannot be empty"
             )
-        
+
         print(f"[API] Translating text: {text[:50]}...")
-        
+        print(f"[API] Source: {source_language}, Targets: {target_languages}")
+
         # Translate
         translation_result = pipeline.translator.translate_to_multiple(
             text,
-            target_languages=['en', 'bn'],
+            target_languages=target_languages,
             source_language=source_language
         )
         
@@ -362,8 +376,10 @@ if __name__ == "__main__":
     import uvicorn
     
     print("\n" + "="*60)
-    print("🚀 CHINESE TRANSLATION API SERVER (FastAPI)")
+    print("🚀 MULTILINGUAL TRANSLATION API SERVER (FastAPI)")
     print("="*60)
+    print("Bidirectional: Chinese ⇄ English ⇄ Bangla")
+    print("Features: Speech-to-Text, Translation, Text-to-Speech")
     print("Server starting...")
     print("Web Interface: http://localhost:8000")
     print("API Documentation: http://localhost:8000/docs")
