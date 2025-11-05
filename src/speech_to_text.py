@@ -3,6 +3,9 @@ import requests
 import base64
 from dotenv import load_dotenv
 import json
+import subprocess
+import tempfile
+import shutil
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +21,72 @@ class SpeechToText:
         self.base_url = "https://speech.googleapis.com/v1/speech:recognize"
         print(f"[STT] ✓ API Key loaded successfully")
         
+        # Check if ffmpeg is available for audio conversion
+        self.ffmpeg_available = self._check_ffmpeg()
+        if self.ffmpeg_available:
+            print(f"[STT] ✓ FFmpeg available for audio optimization")
+        else:
+            print(f"[STT] ⚠ FFmpeg not found - will process files directly")
+    
+    def _check_ffmpeg(self):
+        """Check if ffmpeg is installed"""
+        try:
+            return shutil.which('ffmpeg') is not None
+        except:
+            return False
+    
+    def _optimize_audio_for_stt(self, input_path):
+        """
+        Convert audio to optimal format for Google Speech-to-Text:
+        - FLAC format (best compression + quality)
+        - 16kHz sample rate (optimal for speech recognition)
+        - Mono channel (reduces file size and improves accuracy)
+        
+        Args:
+            input_path (str): Path to original audio file
+            
+        Returns:
+            str: Path to optimized file, or original path if conversion fails
+        """
+        if not self.ffmpeg_available:
+            print(f"[STT] FFmpeg not available - using original file")
+            return input_path
+            
+        try:
+            # Create temporary file for optimized audio
+            temp_dir = tempfile.gettempdir()
+            optimized_path = os.path.join(temp_dir, f"optimized_{os.path.basename(input_path)}.flac")
+            
+            # FFmpeg command to optimize for speech recognition
+            cmd = [
+                'ffmpeg',
+                '-i', input_path,           # Input file
+                '-ac', '1',                 # Convert to mono
+                '-ar', '16000',            # 16kHz sample rate
+                '-af', 'volume=2.0',       # Boost volume by 2x
+                '-compression_level', '8',  # High compression for FLAC
+                '-y',                      # Overwrite output
+                optimized_path
+            ]
+            
+            print(f"[STT] Optimizing audio: {os.path.basename(input_path)} -> FLAC")
+            
+            # Run conversion with timeout
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0 and os.path.exists(optimized_path):
+                original_size = os.path.getsize(input_path)
+                optimized_size = os.path.getsize(optimized_path)
+                print(f"[STT] ✓ Audio optimized: {original_size//1024}KB -> {optimized_size//1024}KB")
+                return optimized_path
+            else:
+                print(f"[STT] ⚠ Audio optimization failed: {result.stderr}")
+                return input_path
+                
+        except Exception as e:
+            print(f"[STT] ⚠ Audio optimization error: {e}")
+            return input_path
+        
     def transcribe_audio(self, audio_file_path, language_code='zh-CN'):
         """
         Transcribe audio file to text using REST API
@@ -29,6 +98,7 @@ class SpeechToText:
         Returns:
             dict: Contains transcription and confidence score
         """
+        optimized_file_path = None
         try:
             print(f"[STT] Reading audio file: {audio_file_path}")
             
@@ -41,13 +111,17 @@ class SpeechToText:
                     'error': f'Audio file not found: {audio_file_path}'
                 }
             
-            # Read and encode audio file to base64
-            with open(audio_file_path, 'rb') as audio_file:
+            # Optimize audio for better speech recognition (if ffmpeg available)
+            optimized_file_path = self._optimize_audio_for_stt(audio_file_path)
+            processing_file_path = optimized_file_path
+            
+            # Read and encode the (optimized) audio file to base64
+            with open(processing_file_path, 'rb') as audio_file:
                 audio_content = audio_file.read()
                 audio_base64 = base64.b64encode(audio_content).decode('utf-8')
             
-            # Determine audio encoding from file extension
-            file_extension = audio_file_path.lower().split('.')[-1]
+            # Determine audio encoding from the processing file (may be optimized)
+            file_extension = processing_file_path.lower().split('.')[-1]
 
             encoding_map = {
                 'wav': 'LINEAR16',
@@ -70,23 +144,27 @@ class SpeechToText:
             encoding = encoding_map[file_extension]
             print(f"[STT] Audio format detected: {file_extension} ({encoding})")
 
-            # Configure sample rate based on format
-            # Only specify sample rate for WAV (LINEAR16) and FLAC
-            # For MP3, WEBM, OGG - let Google auto-detect (supports various sample rates)
+            # Configure sample rate based on format and whether file was optimized
             config = {
                 "encoding": encoding,
                 "languageCode": language_code,
                 "enableAutomaticPunctuation": True
             }
 
-            # Only add sample rate for formats that strictly require it
-            # LINEAR16 (WAV) and FLAC need explicit sample rate
-            # MP3, WEBM_OPUS, OGG_OPUS can work with auto-detection
-            if encoding in ['LINEAR16', 'FLAC']:
+            # If we optimized the file, we know it's 16kHz
+            # Otherwise, handle original file formats
+            if processing_file_path != audio_file_path:
+                # File was optimized to FLAC 16kHz mono
+                config["sampleRateHertz"] = 16000
+                print(f"[STT] Using optimized audio: FLAC, 16kHz, mono")
+            elif encoding in ['LINEAR16', 'FLAC']:
+                # Original WAV/FLAC files need explicit sample rate
                 config["sampleRateHertz"] = 16000
                 print(f"[STT] Using sample rate: 16000 Hz")
             else:
-                print(f"[STT] Sample rate will be auto-detected by Google API (supports 8kHz-48kHz)")
+                # For MP3, WEBM, OGG - try to specify 16kHz for better results
+                config["sampleRateHertz"] = 16000
+                print(f"[STT] Using sample rate: 16000 Hz (optimized for speech recognition)")
 
             # Prepare request payload
             request_data = {
@@ -186,6 +264,16 @@ class SpeechToText:
                 'confidence': 0.0,
                 'error': f'Speech-to-Text error: {str(e)}'
             }
+        
+        finally:
+            # Clean up optimized temporary file
+            if optimized_file_path and optimized_file_path != audio_file_path:
+                try:
+                    if os.path.exists(optimized_file_path):
+                        os.remove(optimized_file_path)
+                        print(f"[STT] ✓ Cleaned up temporary file")
+                except Exception as e:
+                    print(f"[STT] ⚠ Could not clean up temporary file: {e}")
 
 
 # Test function
