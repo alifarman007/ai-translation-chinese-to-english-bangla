@@ -617,40 +617,166 @@
             }
         }
 
+        // Check if browser supports recording
+        function checkMicrophoneSupport() {
+            if (!navigator.mediaDevices) {
+                return {
+                    supported: false,
+                    error: 'Your browser does not support audio recording. Please use Chrome, Firefox, or Edge, and ensure you are accessing the page via HTTPS or localhost.'
+                };
+            }
+
+            if (!navigator.mediaDevices.getUserMedia) {
+                return {
+                    supported: false,
+                    error: 'getUserMedia is not supported in your browser. Please update your browser to the latest version.'
+                };
+            }
+
+            return { supported: true };
+        }
+
         // Toggle recording
         async function toggleRecording() {
             const recordBtn = document.getElementById('recordBtn');
             const indicator = document.getElementById('recordingIndicator');
 
             if (!isRecording) {
+                // Check browser support
+                const supportCheck = checkMicrophoneSupport();
+                if (!supportCheck.supported) {
+                    showError(supportCheck.error);
+                    return;
+                }
+
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
+                    console.log('Requesting microphone access...');
+
+                    // Request microphone access
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            sampleRate: 44100
+                        }
+                    });
+
+                    console.log('Microphone access granted');
+
+                    // Check if MediaRecorder is supported
+                    if (!window.MediaRecorder) {
+                        stream.getTracks().forEach(track => track.stop());
+                        showError('MediaRecorder is not supported in your browser. Please use a modern browser.');
+                        return;
+                    }
+
+                    // Create MediaRecorder
+                    let options = { mimeType: 'audio/webm' };
+
+                    // Try different MIME types for compatibility
+                    if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                            options = { mimeType: 'audio/mp4' };
+                        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+                            options = { mimeType: 'audio/ogg' };
+                        } else {
+                            options = {};
+                        }
+                    }
+
+                    mediaRecorder = new MediaRecorder(stream, options);
                     audioChunks = [];
 
                     mediaRecorder.ondataavailable = (event) => {
-                        audioChunks.push(event.data);
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                            console.log('Audio chunk recorded:', event.data.size, 'bytes');
+                        }
                     };
 
                     mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        selectedFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+                        console.log('Recording stopped, total chunks:', audioChunks.length);
+
+                        if (audioChunks.length === 0) {
+                            showError('No audio was recorded. Please try again.');
+                            return;
+                        }
+
+                        // Create blob from recorded chunks
+                        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+                        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+                        console.log('Audio blob created:', audioBlob.size, 'bytes');
+
+                        // Determine file extension
+                        let extension = 'webm';
+                        if (mimeType.includes('mp4')) extension = 'mp4';
+                        else if (mimeType.includes('ogg')) extension = 'ogg';
+                        else if (mimeType.includes('wav')) extension = 'wav';
+
+                        selectedFile = new File([audioBlob], `recording.${extension}`, { type: mimeType });
                         document.getElementById('fileInfo').textContent = `Recorded: ${(selectedFile.size / 1024).toFixed(2)} KB`;
                         document.getElementById('translateBtn').disabled = false;
+
+                        showSuccess('Recording saved! You can now translate.');
                     };
 
+                    mediaRecorder.onerror = (event) => {
+                        console.error('MediaRecorder error:', event.error);
+                        showError('Recording error: ' + event.error);
+                    };
+
+                    // Start recording
                     mediaRecorder.start();
+                    console.log('Recording started');
+
                     isRecording = true;
-                    recordBtn.textContent = 'Stop Recording';
+                    recordBtn.textContent = '⏹ Stop Recording';
                     recordBtn.classList.remove('btn-secondary');
                     recordBtn.classList.add('btn-primary');
                     indicator.classList.add('active');
+
+                    hideMessages();
+
                 } catch (error) {
-                    showError('Could not access microphone: ' + error.message);
+                    console.error('Microphone access error:', error);
+
+                    let errorMessage = 'Could not access microphone: ';
+
+                    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                        errorMessage += 'Permission denied. Please allow microphone access in your browser settings.';
+                    } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                        errorMessage += 'No microphone found. Please connect a microphone and try again.';
+                    } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                        errorMessage += 'Microphone is already in use by another application.';
+                    } else if (error.name === 'OverconstrainedError') {
+                        errorMessage += 'Could not satisfy audio constraints.';
+                    } else if (error.name === 'TypeError') {
+                        errorMessage += 'Please use HTTPS or localhost to enable recording.';
+                    } else {
+                        errorMessage += error.message || 'Unknown error occurred.';
+                    }
+
+                    showError(errorMessage);
                 }
             } else {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                // Stop recording
+                try {
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
+                        console.log('Stopping recording...');
+                    }
+
+                    if (mediaRecorder && mediaRecorder.stream) {
+                        mediaRecorder.stream.getTracks().forEach(track => {
+                            track.stop();
+                            console.log('Track stopped:', track.kind);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error stopping recording:', error);
+                }
+
                 isRecording = false;
                 recordBtn.textContent = 'Start Recording';
                 recordBtn.classList.remove('btn-primary');
