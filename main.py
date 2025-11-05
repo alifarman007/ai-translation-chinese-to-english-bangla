@@ -29,7 +29,7 @@ app.add_middleware(
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'outputs'
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac'}
+ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac', 'webm', 'ogg', 'mp4', 'm4a'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Ensure directories exist
@@ -129,7 +129,7 @@ async def translate_voice(
     Upload audio file and get translations with audio outputs
 
     **Parameters:**
-    - **file**: Audio file (WAV, MP3, or FLAC) - Max 10MB
+    - **file**: Audio file (WAV, MP3, FLAC, WEBM, OGG, MP4, M4A) - Max 10MB
     - **source_language**: Source language code (default: zh-CN for Chinese; also supports en, bn)
     - **target_languages**: Comma-separated target language codes (default: en,bn; supports en, bn, zh)
 

@@ -21,11 +21,11 @@ class SpeechToText:
     def transcribe_audio(self, audio_file_path, language_code='zh-CN'):
         """
         Transcribe audio file to text using REST API
-        
+
         Args:
-            audio_file_path (str): Path to audio file (WAV, MP3, FLAC)
+            audio_file_path (str): Path to audio file (WAV, MP3, FLAC, WEBM, OGG, MP4, M4A)
             language_code (str): Language code (default: zh-CN for Mandarin)
-            
+
         Returns:
             dict: Contains transcription and confidence score
         """
@@ -48,21 +48,25 @@ class SpeechToText:
             
             # Determine audio encoding from file extension
             file_extension = audio_file_path.lower().split('.')[-1]
-            
+
             encoding_map = {
                 'wav': 'LINEAR16',
                 'mp3': 'MP3',
-                'flac': 'FLAC'
+                'flac': 'FLAC',
+                'webm': 'WEBM_OPUS',
+                'ogg': 'OGG_OPUS',
+                'mp4': 'MP3',
+                'm4a': 'MP3'
             }
-            
+
             if file_extension not in encoding_map:
                 return {
                     'success': False,
                     'transcription': '',
                     'confidence': 0.0,
-                    'error': f'Unsupported audio format: {file_extension}. Use WAV, MP3, or FLAC'
+                    'error': f'Unsupported audio format: {file_extension}. Supported formats: WAV, MP3, FLAC, WEBM, OGG, MP4, M4A'
                 }
-            
+
             encoding = encoding_map[file_extension]
             print(f"[STT] Audio format detected: {file_extension} ({encoding})")
             
