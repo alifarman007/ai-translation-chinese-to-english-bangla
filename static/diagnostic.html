@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recording Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .indicator.red {
+            background: red;
+            animation: pulse 1s infinite;
+        }
+        .indicator.green {
+            background: green;
+        }
+        .indicator.gray {
+            background: gray;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Audio Recording Diagnostic Tool</h1>
+        <p>This tool helps diagnose issues with audio recording and translation.</p>
+
+        <!-- Browser Check -->
+        <div class="section">
+            <h2>1. Browser Compatibility Check</h2>
+            <div id="browserCheck"></div>
+        </div>
+
+        <!-- Recording Test -->
+        <div class="section">
+            <h2>2. Recording Test</h2>
+            <button id="recordBtn" onclick="toggleRecording()">Start Recording</button>
+            <button id="playBtn" onclick="playRecording()" disabled>Play Recording</button>
+            <button id="downloadBtn" onclick="downloadRecording()" disabled>Download Recording</button>
+            <div id="recordStatus"></div>
+            <audio id="audioPlayer" controls style="display:none;"></audio>
+            <div id="audioInfo"></div>
+        </div>
+
+        <!-- Server Check -->
+        <div class="section">
+            <h2>3. Server Connection Check</h2>
+            <button onclick="checkServer()">Check Server</button>
+            <div id="serverStatus"></div>
+        </div>
+
+        <!-- API Test -->
+        <div class="section">
+            <h2>4. API Test (With Recorded Audio)</h2>
+            <p>Language:
+                <select id="testLang">
+                    <option value="en">English</option>
+                    <option value="zh-CN">Chinese</option>
+                    <option value="bn">Bangla</option>
+                </select>
+            </p>
+            <button id="testBtn" onclick="testAPI()" disabled>Test Translation API</button>
+            <div id="apiStatus"></div>
+        </div>
+
+        <!-- Console Log -->
+        <div class="section">
+            <h2>5. Console Log</h2>
+            <button onclick="clearLog()">Clear Log</button>
+            <pre id="consoleLog"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordedBlob = null;
+        let recordedFile = null;
+
+        // Logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEl = document.getElementById('consoleLog');
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logEl.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('consoleLog').textContent = '';
+        }
+
+        // 1. Browser Check
+        function checkBrowser() {
+            const checkEl = document.getElementById('browserCheck');
+            let html = '';
+
+            // Check navigator.mediaDevices
+            if (!navigator.mediaDevices) {
+                html += '<div class="status error">❌ navigator.mediaDevices not supported</div>';
+                log('navigator.mediaDevices not supported', 'error');
+            } else {
+                html += '<div class="status success">✅ navigator.mediaDevices supported</div>';
+                log('navigator.mediaDevices supported', 'success');
+            }
+
+            // Check getUserMedia
+            if (!navigator.mediaDevices?.getUserMedia) {
+                html += '<div class="status error">❌ getUserMedia not supported</div>';
+                log('getUserMedia not supported', 'error');
+            } else {
+                html += '<div class="status success">✅ getUserMedia supported</div>';
+                log('getUserMedia supported', 'success');
+            }
+
+            // Check MediaRecorder
+            if (!window.MediaRecorder) {
+                html += '<div class="status error">❌ MediaRecorder not supported</div>';
+                log('MediaRecorder not supported', 'error');
+            } else {
+                html += '<div class="status success">✅ MediaRecorder supported</div>';
+                log('MediaRecorder supported', 'success');
+
+                // Check supported MIME types
+                const mimeTypes = ['audio/webm', 'audio/webm;codecs=opus', 'audio/ogg', 'audio/mp4', 'audio/wav'];
+                html += '<div class="status info"><strong>Supported formats:</strong><br>';
+                mimeTypes.forEach(mime => {
+                    const supported = MediaRecorder.isTypeSupported(mime);
+                    html += `${supported ? '✅' : '❌'} ${mime}<br>`;
+                    log(`${mime}: ${supported ? 'supported' : 'not supported'}`);
+                });
+                html += '</div>';
+            }
+
+            // Browser info
+            html += `<div class="status info"><strong>Browser:</strong> ${navigator.userAgent}</div>`;
+
+            checkEl.innerHTML = html;
+        }
+
+        // 2. Recording Test
+        async function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            const statusEl = document.getElementById('recordStatus');
+
+            if (!isRecording) {
+                try {
+                    log('Requesting microphone access...');
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    log('Microphone access granted', 'success');
+
+                    // Determine best MIME type
+                    let mimeType = 'audio/webm';
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        mimeType = 'audio/webm;codecs=opus';
+                    } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+                        mimeType = 'audio/ogg;codecs=opus';
+                    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        mimeType = 'audio/mp4';
+                    }
+
+                    log(`Using MIME type: ${mimeType}`);
+
+                    mediaRecorder = new MediaRecorder(stream, { mimeType });
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                            log(`Chunk recorded: ${event.data.size} bytes`);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        log(`Recording stopped. Total chunks: ${audioChunks.length}`, 'success');
+
+                        recordedBlob = new Blob(audioChunks, { type: mimeType });
+                        log(`Blob created: ${recordedBlob.size} bytes, type: ${recordedBlob.type}`);
+
+                        // Determine file extension
+                        let extension = 'webm';
+                        if (mimeType.includes('mp4')) extension = 'mp4';
+                        else if (mimeType.includes('ogg')) extension = 'ogg';
+
+                        recordedFile = new File([recordedBlob], `recording.${extension}`, { type: mimeType });
+
+                        // Enable playback
+                        const audioPlayer = document.getElementById('audioPlayer');
+                        audioPlayer.src = URL.createObjectURL(recordedBlob);
+                        audioPlayer.style.display = 'block';
+                        document.getElementById('playBtn').disabled = false;
+                        document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('testBtn').disabled = false;
+
+                        // Show audio info
+                        document.getElementById('audioInfo').innerHTML = `
+                            <div class="status success">
+                                <strong>Recording Info:</strong><br>
+                                Size: ${recordedBlob.size} bytes (${(recordedBlob.size / 1024).toFixed(2)} KB)<br>
+                                Type: ${recordedBlob.type}<br>
+                                File: ${recordedFile.name}
+                            </div>
+                        `;
+                    };
+
+                    mediaRecorder.onerror = (event) => {
+                        log(`MediaRecorder error: ${event.error}`, 'error');
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordBtn.textContent = '⏹ Stop Recording';
+                    statusEl.innerHTML = '<div class="status info"><span class="indicator red"></span>Recording... Speak now!</div>';
+                    log('Recording started', 'success');
+
+                } catch (error) {
+                    log(`Error: ${error.name} - ${error.message}`, 'error');
+                    statusEl.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+                }
+            } else {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                if (mediaRecorder?.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+                isRecording = false;
+                recordBtn.textContent = 'Start Recording';
+                statusEl.innerHTML = '<div class="status success"><span class="indicator green"></span>Recording stopped</div>';
+            }
+        }
+
+        function playRecording() {
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.play();
+            log('Playing recording');
+        }
+
+        function downloadRecording() {
+            if (!recordedBlob) return;
+            const url = URL.createObjectURL(recordedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = recordedFile.name;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('Recording downloaded', 'success');
+        }
+
+        // 3. Server Check
+        async function checkServer() {
+            const statusEl = document.getElementById('serverStatus');
+            statusEl.innerHTML = '<div class="status info">Checking server...</div>';
+            log('Checking server connection...');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusEl.innerHTML = `<div class="status success">✅ Server is running<br><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                    log('Server check passed', 'success');
+                } else {
+                    statusEl.innerHTML = `<div class="status error">❌ Server error (${response.status})</div>`;
+                    log(`Server error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<div class="status error">❌ Cannot connect to server: ${error.message}<br>Make sure server is running on ${API_BASE_URL}</div>`;
+                log(`Server connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // 4. API Test
+        async function testAPI() {
+            if (!recordedFile) {
+                alert('Please record audio first!');
+                return;
+            }
+
+            const statusEl = document.getElementById('apiStatus');
+            const lang = document.getElementById('testLang').value;
+            statusEl.innerHTML = '<div class="status info">Testing API...</div>';
+            log(`Testing API with language: ${lang}`);
+
+            const formData = new FormData();
+            formData.append('file', recordedFile);
+            formData.append('source_language', lang);
+            formData.append('target_languages', lang === 'en' ? 'zh' : 'en');
+
+            log(`Sending request to /translate-voice`);
+            log(`File: ${recordedFile.name}, Size: ${recordedFile.size} bytes, Type: ${recordedFile.type}`);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/translate-voice`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                log(`Response status: ${response.status} ${response.statusText}`);
+
+                const data = await response.json();
+                log(`Response received: ${JSON.stringify(data).substring(0, 200)}...`);
+
+                if (response.ok && data.success) {
+                    statusEl.innerHTML = `
+                        <div class="status success">
+                            ✅ Translation successful!<br>
+                            <strong>Transcription:</strong> ${data.transcription.text}<br>
+                            <strong>Confidence:</strong> ${(data.transcription.confidence * 100).toFixed(1)}%<br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                    log('Translation successful!', 'success');
+                } else {
+                    let errorMsg = 'Unknown error';
+                    if (data.detail) {
+                        errorMsg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+                    } else if (data.error) {
+                        errorMsg = data.error;
+                    }
+
+                    statusEl.innerHTML = `
+                        <div class="status error">
+                            ❌ Translation failed<br>
+                            <strong>Error:</strong> ${errorMsg}<br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                    log(`Translation failed: ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<div class="status error">❌ Request failed: ${error.message}</div>`;
+                log(`Request failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            checkBrowser();
+            log('Diagnostic tool loaded');
+        };
+    </script>
+</body>
+</html>
