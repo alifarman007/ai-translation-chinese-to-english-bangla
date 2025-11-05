@@ -95,38 +95,56 @@ class SpeechToText:
             }
             
             print(f"[STT] Sending to Google Speech-to-Text API (Language: {language_code})...")
-            
+            print(f"[STT] Audio size: {len(audio_content)} bytes")
+
             # Make API request
             url = f"{self.base_url}?key={self.api_key}"
             headers = {'Content-Type': 'application/json'}
-            
+
             response = requests.post(
                 url,
                 headers=headers,
                 data=json.dumps(request_data),
                 timeout=60
             )
-            
+
             # Check response status
             if response.status_code != 200:
                 error_detail = response.json() if response.text else 'Unknown error'
+                print(f"[STT] ✗ API Error: {response.status_code}")
+                print(f"[STT] Error details: {error_detail}")
                 return {
                     'success': False,
                     'transcription': '',
                     'confidence': 0.0,
                     'error': f'API Error ({response.status_code}): {error_detail}'
                 }
-            
+
             # Parse response
             result = response.json()
-            
+            print(f"[STT] Response received: {len(str(result))} characters")
+
             # Check if results exist
             if 'results' not in result or not result['results']:
+                print(f"[STT] ✗ No results in API response")
+                print(f"[STT] Full response: {result}")
+
+                # Check if there's an error in the response
+                if 'error' in result:
+                    error_msg = result['error'].get('message', 'Unknown error')
+                    return {
+                        'success': False,
+                        'transcription': '',
+                        'confidence': 0.0,
+                        'error': f'Google API Error: {error_msg}'
+                    }
+
+                # No speech detected - provide helpful message
                 return {
                     'success': False,
                     'transcription': '',
                     'confidence': 0.0,
-                    'error': 'No speech detected in audio file'
+                    'error': 'No speech detected. Try: 1) Speaking louder and closer to mic, 2) Recording a longer phrase, 3) Using the diagnostic tool to test your recording, 4) Uploading a pre-recorded file instead'
                 }
             
             # Extract transcription
