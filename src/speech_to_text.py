@@ -71,25 +71,22 @@ class SpeechToText:
             print(f"[STT] Audio format detected: {file_extension} ({encoding})")
 
             # Configure sample rate based on format
-            # MP3 files often need explicit sample rate
+            # Only specify sample rate for WAV (LINEAR16) and FLAC
+            # For MP3, WEBM, OGG - let Google auto-detect (supports various sample rates)
             config = {
                 "encoding": encoding,
                 "languageCode": language_code,
                 "enableAutomaticPunctuation": True
             }
 
-            # Add sample rate - MP3 needs it specified
-            # WEBM_OPUS and OGG_OPUS can auto-detect, but MP3 is better with explicit rate
-            if encoding in ['LINEAR16', 'FLAC', 'MP3']:
+            # Only add sample rate for formats that strictly require it
+            # LINEAR16 (WAV) and FLAC need explicit sample rate
+            # MP3, WEBM_OPUS, OGG_OPUS can work with auto-detection
+            if encoding in ['LINEAR16', 'FLAC']:
                 config["sampleRateHertz"] = 16000
                 print(f"[STT] Using sample rate: 16000 Hz")
             else:
-                print(f"[STT] Sample rate will be auto-detected by Google API")
-
-            # Add audio channel configuration for better compatibility
-            if encoding == 'MP3':
-                config["audioChannelCount"] = 1  # Mono - more reliable for speech
-                print(f"[STT] Using mono audio channel for MP3")
+                print(f"[STT] Sample rate will be auto-detected by Google API (supports 8kHz-48kHz)")
 
             # Prepare request payload
             request_data = {
