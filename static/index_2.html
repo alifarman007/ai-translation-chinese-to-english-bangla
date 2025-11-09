@@ -439,6 +439,15 @@
         let audioChunks = [];
         let currentSourceLang = 'bn';  // Bangla
         let currentTargetLang = 'zh';  // Chinese
+        let currentAudioUrl = null;  // Store current audio URL
+
+        // Map language codes to API response keys
+        const langCodeToName = {
+            'bn': 'bangla',
+            'zh': 'chinese',
+            'zh-CN': 'chinese',
+            'en': 'english'
+        };
 
         // Toggle language direction
         function toggleLanguage() {
@@ -609,17 +618,24 @@
                 });
 
                 const data = await response.json();
+                console.log('API Response:', data);
 
                 if (response.ok && data.success) {
                     // Display results
                     displayResults(data);
 
                     // Auto-play translated audio
-                    if (data.audio_files && data.audio_files[currentTargetLang]) {
-                        playAudio(data.audio_files[currentTargetLang].url);
-                    }
+                    const targetLangName = langCodeToName[currentTargetLang];
+                    console.log('Looking for audio with key:', targetLangName);
+                    console.log('Available audio files:', Object.keys(data.audio_files || {}));
 
-                    showStatus('success', 'Translation complete! Audio playing...');
+                    if (data.audio_files && data.audio_files[targetLangName]) {
+                        currentAudioUrl = data.audio_files[targetLangName].url;
+                        playAudio(currentAudioUrl);
+                    } else {
+                        console.warn('No audio file found for:', targetLangName);
+                        showStatus('success', 'Translation complete!');
+                    }
                 } else {
                     let errorMsg = 'Translation failed';
                     if (data.detail) {
@@ -642,14 +658,25 @@
             const translatedText = document.getElementById('translatedText');
             const result = document.getElementById('result');
 
+            console.log('Displaying results...');
+
             // Set original text (transcription)
             if (data.transcription) {
                 originalText.textContent = data.transcription.text;
+                console.log('Original text:', data.transcription.text);
             }
 
-            // Set translated text
-            if (data.translations && data.translations[currentTargetLang]) {
-                translatedText.textContent = data.translations[currentTargetLang];
+            // Set translated text using language name mapping
+            const targetLangName = langCodeToName[currentTargetLang];
+            console.log('Looking for translation with key:', targetLangName);
+            console.log('Available translations:', Object.keys(data.translations || {}));
+
+            if (data.translations && data.translations[targetLangName]) {
+                translatedText.textContent = data.translations[targetLangName];
+                console.log('Translated text:', data.translations[targetLangName]);
+            } else {
+                console.warn('No translation found for:', targetLangName);
+                translatedText.textContent = 'Translation not available';
             }
 
             // Show result
@@ -663,10 +690,25 @@
             audioPlayer.load();
 
             audioPlayer.play()
-                .then(() => console.log('Audio playing'))
+                .then(() => {
+                    console.log('Audio playing');
+                    showStatus('success', 'Translation complete! Audio playing...');
+                })
                 .catch(error => {
                     console.error('Audio play error:', error);
-                    showStatus('error', 'Could not play audio automatically');
+                    // Autoplay was blocked - this is normal on many browsers
+                    showStatus('success', 'Translation complete! (Tap to play audio)');
+
+                    // Add one-time click handler to play audio
+                    const playOnClick = () => {
+                        audioPlayer.play()
+                            .then(() => {
+                                showStatus('success', 'Audio playing...');
+                                document.removeEventListener('click', playOnClick);
+                            })
+                            .catch(err => console.error('Play failed:', err));
+                    };
+                    document.addEventListener('click', playOnClick);
                 });
         }
 
@@ -705,8 +747,15 @@
         });
 
         // Initialize
-        console.log('Voice Translator ready');
-        console.log('Default: Bangla → Chinese');
+        console.log('=== Voice Translator Initialized ===');
+        console.log('API Base URL:', API_BASE_URL);
+        console.log('Default direction: Bangla (bn) → Chinese (zh)');
+        console.log('Source language code:', currentSourceLang);
+        console.log('Target language code:', currentTargetLang);
+        console.log('Source language name:', langCodeToName[currentSourceLang]);
+        console.log('Target language name:', langCodeToName[currentTargetLang]);
+        console.log('Language code mappings:', langCodeToName);
+        console.log('===================================');
     </script>
 </body>
 </html>
