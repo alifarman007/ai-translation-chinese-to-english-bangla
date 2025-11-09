@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Voice Translator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Language Toggle Switch */
+        .language-toggle {
+            background: #f5f7fa;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .toggle-label {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .language-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+            min-width: 100px;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 70px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #667eea;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "⇄";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        input:checked + .slider {
+            background-color: #764ba2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(36px);
+        }
+
+        /* Record Button */
+        .record-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .record-button {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .record-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .record-button.recording {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            animation: pulse 1.5s infinite;
+        }
+
+        .record-button.processing {
+            background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
+            cursor: not-allowed;
+        }
+
+        .record-icon {
+            font-size: 48px;
+        }
+
+        .record-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 10px 30px rgba(255, 68, 68, 0.4);
+            }
+            50% {
+                box-shadow: 0 10px 50px rgba(255, 68, 68, 0.8);
+            }
+        }
+
+        /* Status Message */
+        .status {
+            text-align: center;
+            min-height: 60px;
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            display: none;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .status-message.processing {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        /* Result Display */
+        .result {
+            display: none;
+            background: #f5f7fa;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 20px;
+        }
+
+        .result-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-text {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.6;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-text.translated {
+            border-left-color: #28a745;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Instructions */
+        .instructions {
+            background: #f5f7fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .instructions h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            text-align: left;
+            padding-left: 20px;
+            color: #555;
+            font-size: 14px;
+            line-height: 2;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .record-button {
+                width: 160px;
+                height: 160px;
+                font-size: 16px;
+            }
+
+            .record-icon {
+                font-size: 40px;
+            }
+
+            .language-text {
+                font-size: 16px;
+                min-width: 80px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .record-button {
+                width: 140px;
+                height: 140px;
+            }
+
+            .toggle-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .language-text {
+                min-width: auto;
+            }
+        }
+
+        /* Audio Player (hidden) */
+        #audioPlayer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Voice Translator</h1>
+            <p>Simple Bangla ⇄ Chinese Translation</p>
+        </div>
+
+        <!-- Language Toggle -->
+        <div class="language-toggle">
+            <div class="toggle-label">Translation Direction</div>
+            <div class="toggle-container">
+                <span class="language-text" id="sourceLang">🇧🇩 Bangla</span>
+                <label class="switch">
+                    <input type="checkbox" id="languageToggle" onchange="toggleLanguage()">
+                    <span class="slider"></span>
+                </label>
+                <span class="language-text" id="targetLang">🇨🇳 Chinese</span>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div class="status">
+            <div class="status-message info active" id="statusMessage">
+                Press and hold the button to record your voice
+            </div>
+        </div>
+
+        <!-- Record Button -->
+        <div class="record-section">
+            <button
+                class="record-button"
+                id="recordButton"
+                onmousedown="startRecording()"
+                onmouseup="stopRecording()"
+                ontouchstart="startRecording(event)"
+                ontouchend="stopRecording(event)"
+            >
+                <div class="record-icon" id="recordIcon">🎤</div>
+                <div class="record-text" id="recordText">Press & Hold</div>
+            </button>
+        </div>
+
+        <!-- Result Display -->
+        <div class="result" id="result">
+            <div class="result-section">
+                <div class="result-label" id="originalLabel">Original (Bangla)</div>
+                <div class="result-text" id="originalText">-</div>
+            </div>
+            <div class="result-section">
+                <div class="result-label" id="translatedLabel">Translation (Chinese)</div>
+                <div class="result-text translated" id="translatedText">-</div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>How to Use</h3>
+            <ol>
+                <li>Choose translation direction using toggle</li>
+                <li>Press and hold the microphone button</li>
+                <li>Speak clearly in your language</li>
+                <li>Release button to auto-translate</li>
+                <li>Translation will play automatically</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Hidden Audio Player -->
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        let isRecording = false;
+        let isProcessing = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let currentSourceLang = 'bn';  // Bangla
+        let currentTargetLang = 'zh';  // Chinese
+        let currentAudioUrl = null;  // Store current audio URL
+
+        // Map language codes to API response keys
+        const langCodeToName = {
+            'bn': 'bangla',
+            'zh': 'chinese',
+            'zh-CN': 'chinese',
+            'en': 'english'
+        };
+
+        // Toggle language direction
+        function toggleLanguage() {
+            const toggle = document.getElementById('languageToggle');
+            const sourceLangEl = document.getElementById('sourceLang');
+            const targetLangEl = document.getElementById('targetLang');
+            const originalLabel = document.getElementById('originalLabel');
+            const translatedLabel = document.getElementById('translatedLabel');
+
+            if (toggle.checked) {
+                // Chinese to Bangla
+                currentSourceLang = 'zh-CN';
+                currentTargetLang = 'bn';
+                sourceLangEl.textContent = '🇨🇳 Chinese';
+                targetLangEl.textContent = '🇧🇩 Bangla';
+                originalLabel.textContent = 'Original (Chinese)';
+                translatedLabel.textContent = 'Translation (Bangla)';
+            } else {
+                // Bangla to Chinese
+                currentSourceLang = 'bn';
+                currentTargetLang = 'zh';
+                sourceLangEl.textContent = '🇧🇩 Bangla';
+                targetLangEl.textContent = '🇨🇳 Chinese';
+                originalLabel.textContent = 'Original (Bangla)';
+                translatedLabel.textContent = 'Translation (Chinese)';
+            }
+
+            showStatus('info', 'Translation direction changed');
+            hideResult();
+        }
+
+        // Start recording
+        async function startRecording(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (isProcessing || isRecording) {
+                return;
+            }
+
+            try {
+                console.log('Starting recording...');
+
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                });
+
+                // Create MediaRecorder
+                let options = { mimeType: 'audio/webm' };
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        options = { mimeType: 'audio/mp4' };
+                    } else {
+                        options = {};
+                    }
+                }
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    console.log('Recording stopped');
+
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+
+                    if (audioChunks.length > 0) {
+                        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+                        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+                        let extension = 'webm';
+                        if (mimeType.includes('mp4')) extension = 'mp4';
+                        else if (mimeType.includes('ogg')) extension = 'ogg';
+
+                        const audioFile = new File([audioBlob], `recording.${extension}`, { type: mimeType });
+
+                        // Auto-translate
+                        await translateAudio(audioFile);
+                    }
+                };
+
+                // Start recording
+                mediaRecorder.start();
+                isRecording = true;
+
+                // Update UI
+                const button = document.getElementById('recordButton');
+                const icon = document.getElementById('recordIcon');
+                const text = document.getElementById('recordText');
+
+                button.classList.add('recording');
+                icon.textContent = '🔴';
+                text.textContent = 'Recording...';
+
+                showStatus('info', 'Recording... Release to translate');
+
+            } catch (error) {
+                console.error('Microphone error:', error);
+
+                let errorMessage = 'Could not access microphone. ';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Please allow microphone access.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No microphone found.';
+                } else {
+                    errorMessage += error.message;
+                }
+
+                showStatus('error', errorMessage);
+            }
+        }
+
+        // Stop recording
+        function stopRecording(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (!isRecording) {
+                return;
+            }
+
+            console.log('Stopping recording...');
+
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            isRecording = false;
+
+            // Update UI
+            const button = document.getElementById('recordButton');
+            const icon = document.getElementById('recordIcon');
+            const text = document.getElementById('recordText');
+
+            button.classList.remove('recording');
+            button.classList.add('processing');
+            icon.textContent = '⏳';
+            text.textContent = 'Processing...';
+        }
+
+        // Translate audio
+        async function translateAudio(audioFile) {
+            isProcessing = true;
+            showStatus('processing', 'Translating your speech...');
+
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('source_language', currentSourceLang);
+            formData.append('target_languages', currentTargetLang);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/translate-voice`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('API Response:', data);
+
+                if (response.ok && data.success) {
+                    // Display results
+                    displayResults(data);
+
+                    // Auto-play translated audio
+                    const targetLangName = langCodeToName[currentTargetLang];
+                    console.log('Looking for audio with key:', targetLangName);
+                    console.log('Available audio files:', Object.keys(data.audio_files || {}));
+
+                    if (data.audio_files && data.audio_files[targetLangName]) {
+                        currentAudioUrl = data.audio_files[targetLangName].url;
+                        playAudio(currentAudioUrl);
+                    } else {
+                        console.warn('No audio file found for:', targetLangName);
+                        showStatus('success', 'Translation complete!');
+                    }
+                } else {
+                    let errorMsg = 'Translation failed';
+                    if (data.detail) {
+                        errorMsg += ': ' + (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail));
+                    }
+                    showStatus('error', errorMsg);
+                }
+            } catch (error) {
+                console.error('Translation error:', error);
+                showStatus('error', 'Network error. Make sure the server is running.');
+            } finally {
+                isProcessing = false;
+                resetButton();
+            }
+        }
+
+        // Display translation results
+        function displayResults(data) {
+            const originalText = document.getElementById('originalText');
+            const translatedText = document.getElementById('translatedText');
+            const result = document.getElementById('result');
+
+            console.log('Displaying results...');
+
+            // Set original text (transcription)
+            if (data.transcription) {
+                originalText.textContent = data.transcription.text;
+                console.log('Original text:', data.transcription.text);
+            }
+
+            // Set translated text using language name mapping
+            const targetLangName = langCodeToName[currentTargetLang];
+            console.log('Looking for translation with key:', targetLangName);
+            console.log('Available translations:', Object.keys(data.translations || {}));
+
+            if (data.translations && data.translations[targetLangName]) {
+                translatedText.textContent = data.translations[targetLangName];
+                console.log('Translated text:', data.translations[targetLangName]);
+            } else {
+                console.warn('No translation found for:', targetLangName);
+                translatedText.textContent = 'Translation not available';
+            }
+
+            // Show result
+            result.classList.add('active');
+        }
+
+        // Play audio
+        function playAudio(audioUrl) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = `${API_BASE_URL}${audioUrl}`;
+            audioPlayer.load();
+
+            audioPlayer.play()
+                .then(() => {
+                    console.log('Audio playing');
+                    showStatus('success', 'Translation complete! Audio playing...');
+                })
+                .catch(error => {
+                    console.error('Audio play error:', error);
+                    // Autoplay was blocked - this is normal on many browsers
+                    showStatus('success', 'Translation complete! (Tap to play audio)');
+
+                    // Add one-time click handler to play audio
+                    const playOnClick = () => {
+                        audioPlayer.play()
+                            .then(() => {
+                                showStatus('success', 'Audio playing...');
+                                document.removeEventListener('click', playOnClick);
+                            })
+                            .catch(err => console.error('Play failed:', err));
+                    };
+                    document.addEventListener('click', playOnClick);
+                });
+        }
+
+        // Reset button to initial state
+        function resetButton() {
+            const button = document.getElementById('recordButton');
+            const icon = document.getElementById('recordIcon');
+            const text = document.getElementById('recordText');
+
+            button.classList.remove('recording', 'processing');
+            icon.textContent = '🎤';
+            text.textContent = 'Press & Hold';
+        }
+
+        // Show status message
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = `status-message ${type} active`;
+
+            if (type === 'processing') {
+                statusEl.innerHTML = `<div class="spinner"></div>${message}`;
+            } else {
+                const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+                statusEl.textContent = `${icon} ${message}`;
+            }
+        }
+
+        // Hide result
+        function hideResult() {
+            document.getElementById('result').classList.remove('active');
+        }
+
+        // Prevent context menu on long press (mobile)
+        document.getElementById('recordButton').addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Initialize
+        console.log('=== Voice Translator Initialized ===');
+        console.log('API Base URL:', API_BASE_URL);
+        console.log('Default direction: Bangla (bn) → Chinese (zh)');
+        console.log('Source language code:', currentSourceLang);
+        console.log('Target language code:', currentTargetLang);
+        console.log('Source language name:', langCodeToName[currentSourceLang]);
+        console.log('Target language name:', langCodeToName[currentTargetLang]);
+        console.log('Language code mappings:', langCodeToName);
+        console.log('===================================');
+    </script>
+</body>
+</html>
