@@ -358,6 +358,40 @@
         #audioPlayer {
             display: none;
         }
+
+        /* WhatsApp Share Button */
+        .whatsapp-button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .whatsapp-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4);
+        }
+
+        .whatsapp-button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);
+        }
+
+        .whatsapp-icon {
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
@@ -412,6 +446,12 @@
                 <div class="result-label" id="translatedLabel">Translation (Chinese)</div>
                 <div class="result-text translated" id="translatedText">-</div>
             </div>
+
+            <!-- WhatsApp Share Button -->
+            <button class="whatsapp-button" id="whatsappButton" onclick="shareToWhatsApp()">
+                <span class="whatsapp-icon">📱</span>
+                <span>Share to WhatsApp</span>
+            </button>
         </div>
 
         <!-- Instructions -->
@@ -440,6 +480,8 @@
         let currentSourceLang = 'bn';  // Bangla
         let currentTargetLang = 'zh';  // Chinese
         let currentAudioUrl = null;  // Store current audio URL
+        let currentOriginalText = '';  // Store original text
+        let currentTranslatedText = '';  // Store translated text
 
         // Map language codes to API response keys
         const langCodeToName = {
@@ -662,8 +704,9 @@
 
             // Set original text (transcription)
             if (data.transcription) {
-                originalText.textContent = data.transcription.text;
-                console.log('Original text:', data.transcription.text);
+                currentOriginalText = data.transcription.text;
+                originalText.textContent = currentOriginalText;
+                console.log('Original text:', currentOriginalText);
             }
 
             // Set translated text using language name mapping
@@ -672,11 +715,13 @@
             console.log('Available translations:', Object.keys(data.translations || {}));
 
             if (data.translations && data.translations[targetLangName]) {
-                translatedText.textContent = data.translations[targetLangName];
-                console.log('Translated text:', data.translations[targetLangName]);
+                currentTranslatedText = data.translations[targetLangName];
+                translatedText.textContent = currentTranslatedText;
+                console.log('Translated text:', currentTranslatedText);
             } else {
                 console.warn('No translation found for:', targetLangName);
-                translatedText.textContent = 'Translation not available';
+                currentTranslatedText = 'Translation not available';
+                translatedText.textContent = currentTranslatedText;
             }
 
             // Show result
@@ -739,6 +784,87 @@
         // Hide result
         function hideResult() {
             document.getElementById('result').classList.remove('active');
+        }
+
+        // Share to WhatsApp
+        async function shareToWhatsApp() {
+            console.log('Sharing to WhatsApp...');
+
+            if (!currentOriginalText && !currentTranslatedText) {
+                showStatus('error', 'No translation to share. Please record something first.');
+                return;
+            }
+
+            try {
+                // Prepare the message text
+                const sourceLangLabel = document.getElementById('originalLabel').textContent;
+                const targetLangLabel = document.getElementById('translatedLabel').textContent;
+
+                let message = `🌐 *Voice Translation*\n\n`;
+                message += `${sourceLangLabel}:\n${currentOriginalText}\n\n`;
+                message += `${targetLangLabel}:\n${currentTranslatedText}`;
+
+                // For WhatsApp sharing with text
+                const whatsappText = encodeURIComponent(message);
+
+                // Check if we're on mobile or desktop
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                if (isMobile) {
+                    // Mobile: Try to use Web Share API with audio if available
+                    if (navigator.share && currentAudioUrl) {
+                        try {
+                            // Fetch the audio file
+                            const audioResponse = await fetch(`${API_BASE_URL}${currentAudioUrl}`);
+                            const audioBlob = await audioResponse.blob();
+
+                            // Get the filename from the URL
+                            const fileName = currentAudioUrl.split('/').pop();
+
+                            // Create a File object
+                            const audioFile = new File([audioBlob], fileName, { type: 'audio/mpeg' });
+
+                            // Share using Web Share API
+                            await navigator.share({
+                                title: 'Voice Translation',
+                                text: message,
+                                files: [audioFile]
+                            });
+
+                            showStatus('success', 'Shared to WhatsApp successfully!');
+                            return;
+                        } catch (shareError) {
+                            console.log('Web Share API failed, falling back to URL method:', shareError);
+                            // Fall back to URL method below
+                        }
+                    }
+
+                    // Mobile fallback: Open WhatsApp app with text only
+                    window.location.href = `whatsapp://send?text=${whatsappText}`;
+                    showStatus('info', 'Opening WhatsApp... Note: Audio file needs to be shared manually');
+                } else {
+                    // Desktop: Open WhatsApp Web with text
+                    window.open(`https://web.whatsapp.com/send?text=${whatsappText}`, '_blank');
+
+                    if (currentAudioUrl) {
+                        showStatus('info', 'WhatsApp opened! Download the audio file separately to share it.');
+
+                        // Optionally download the audio file for the user
+                        setTimeout(() => {
+                            const link = document.createElement('a');
+                            link.href = `${API_BASE_URL}${currentAudioUrl}`;
+                            link.download = currentAudioUrl.split('/').pop();
+                            link.click();
+                        }, 1000);
+                    } else {
+                        showStatus('success', 'WhatsApp opened with translation text!');
+                    }
+                }
+
+            } catch (error) {
+                console.error('WhatsApp share error:', error);
+                showStatus('error', 'Failed to share to WhatsApp: ' + error.message);
+            }
         }
 
         // Prevent context menu on long press (mobile)

@@ -87,13 +87,86 @@ class SpeechToText:
             print(f"[STT] ⚠ Audio optimization error: {e}")
             return input_path
         
-    def transcribe_audio(self, audio_file_path, language_code='zh-CN'):
+    def _transcribe_with_language(self, audio_content, encoding, processing_file_path, audio_file_path, language_code):
+        """
+        Helper method to transcribe audio with a specific language code
+
+        Args:
+            audio_content (bytes): Audio file content
+            encoding (str): Audio encoding format
+            processing_file_path (str): Path to the audio file being processed
+            audio_file_path (str): Original audio file path
+            language_code (str): Language code to use
+
+        Returns:
+            dict: Contains transcription, confidence, and language
+        """
+        try:
+            # Encode audio to base64
+            audio_base64 = base64.b64encode(audio_content).decode('utf-8')
+
+            # Configure request
+            config = {
+                "encoding": encoding,
+                "languageCode": language_code,
+                "enableAutomaticPunctuation": True
+            }
+
+            # Set sample rate
+            if processing_file_path != audio_file_path:
+                config["sampleRateHertz"] = 16000
+            elif encoding in ['LINEAR16', 'FLAC']:
+                config["sampleRateHertz"] = 16000
+            else:
+                config["sampleRateHertz"] = 16000
+
+            # Prepare request payload
+            request_data = {
+                "config": config,
+                "audio": {
+                    "content": audio_base64
+                }
+            }
+
+            # Make API request
+            url = f"{self.base_url}?key={self.api_key}"
+            headers = {'Content-Type': 'application/json'}
+
+            response = requests.post(
+                url,
+                headers=headers,
+                data=json.dumps(request_data),
+                timeout=60
+            )
+
+            if response.status_code != 200:
+                return None
+
+            result = response.json()
+
+            if 'results' not in result or not result['results']:
+                return None
+
+            transcript = result['results'][0]['alternatives'][0]['transcript']
+            confidence = result['results'][0]['alternatives'][0].get('confidence', 0.0)
+
+            return {
+                'transcription': transcript,
+                'confidence': confidence,
+                'language': language_code
+            }
+
+        except Exception as e:
+            print(f"[STT] Error with language {language_code}: {e}")
+            return None
+
+    def transcribe_audio(self, audio_file_path, language_code=None):
         """
         Transcribe audio file to text using REST API
 
         Args:
             audio_file_path (str): Path to audio file (WAV, MP3, FLAC, WEBM, OGG, MP4, M4A)
-            language_code (str): Language code (default: zh-CN for Mandarin)
+            language_code (str): Language code (if None, auto-detects from zh-CN, en-US, bn-BD)
 
         Returns:
             dict: Contains transcription and confidence score
@@ -143,102 +216,72 @@ class SpeechToText:
 
             encoding = encoding_map[file_extension]
             print(f"[STT] Audio format detected: {file_extension} ({encoding})")
-
-            # Configure sample rate based on format and whether file was optimized
-            config = {
-                "encoding": encoding,
-                "languageCode": language_code,
-                "enableAutomaticPunctuation": True
-            }
-
-            # If we optimized the file, we know it's 16kHz
-            # Otherwise, handle original file formats
-            if processing_file_path != audio_file_path:
-                # File was optimized to FLAC 16kHz mono
-                config["sampleRateHertz"] = 16000
-                print(f"[STT] Using optimized audio: FLAC, 16kHz, mono")
-            elif encoding in ['LINEAR16', 'FLAC']:
-                # Original WAV/FLAC files need explicit sample rate
-                config["sampleRateHertz"] = 16000
-                print(f"[STT] Using sample rate: 16000 Hz")
-            else:
-                # For MP3, WEBM, OGG - try to specify 16kHz for better results
-                config["sampleRateHertz"] = 16000
-                print(f"[STT] Using sample rate: 16000 Hz (optimized for speech recognition)")
-
-            # Prepare request payload
-            request_data = {
-                "config": config,
-                "audio": {
-                    "content": audio_base64
-                }
-            }
-            
-            print(f"[STT] Sending to Google Speech-to-Text API (Language: {language_code})...")
             print(f"[STT] Audio size: {len(audio_content)} bytes")
 
-            # Make API request
-            url = f"{self.base_url}?key={self.api_key}"
-            headers = {'Content-Type': 'application/json'}
+            # If language is specified, use it directly
+            if language_code is not None:
+                print(f"[STT] Language: {language_code}")
+                result = self._transcribe_with_language(
+                    audio_content, encoding, processing_file_path,
+                    audio_file_path, language_code
+                )
 
-            response = requests.post(
-                url,
-                headers=headers,
-                data=json.dumps(request_data),
-                timeout=60
-            )
-
-            # Check response status
-            if response.status_code != 200:
-                error_detail = response.json() if response.text else 'Unknown error'
-                print(f"[STT] ✗ API Error: {response.status_code}")
-                print(f"[STT] Error details: {error_detail}")
-                return {
-                    'success': False,
-                    'transcription': '',
-                    'confidence': 0.0,
-                    'error': f'API Error ({response.status_code}): {error_detail}'
-                }
-
-            # Parse response
-            result = response.json()
-            print(f"[STT] Response received: {len(str(result))} characters")
-
-            # Check if results exist
-            if 'results' not in result or not result['results']:
-                print(f"[STT] ✗ No results in API response")
-                print(f"[STT] Full response: {result}")
-
-                # Check if there's an error in the response
-                if 'error' in result:
-                    error_msg = result['error'].get('message', 'Unknown error')
+                if result:
+                    print(f"[STT] ✓ Transcription successful (Confidence: {result['confidence']:.2%})")
+                    print(f"[STT] Text: {result['transcription']}")
+                    return {
+                        'success': True,
+                        'transcription': result['transcription'],
+                        'confidence': result['confidence'],
+                        'language': result['language']
+                    }
+                else:
                     return {
                         'success': False,
                         'transcription': '',
                         'confidence': 0.0,
-                        'error': f'Google API Error: {error_msg}'
+                        'error': 'No speech detected'
                     }
 
-                # No speech detected - provide helpful message
+            # Auto-detect language by trying all supported languages
+            print(f"[STT] Language: Auto-detection enabled")
+            print(f"[STT] Trying languages: bn-BD, en-US, zh-CN")
+
+            languages_to_try = ['bn-BD', 'en-US', 'zh-CN']
+            results = []
+
+            for lang in languages_to_try:
+                print(f"[STT] Attempting transcription with {lang}...")
+                result = self._transcribe_with_language(
+                    audio_content, encoding, processing_file_path,
+                    audio_file_path, lang
+                )
+
+                if result:
+                    results.append(result)
+                    print(f"[STT]   → {lang}: Confidence {result['confidence']:.2%}")
+
+            # If no results, return error
+            if not results:
+                print(f"[STT] ✗ No speech detected in any language")
                 return {
                     'success': False,
                     'transcription': '',
                     'confidence': 0.0,
-                    'error': 'No speech detected. Try: 1) Speaking louder and closer to mic, 2) Recording a longer phrase, 3) Using the diagnostic tool to test your recording, 4) Uploading a pre-recorded file instead'
+                    'error': 'No speech detected. Try: 1) Speaking louder and closer to mic, 2) Recording a longer phrase, 3) Uploading a pre-recorded file instead'
                 }
-            
-            # Extract transcription
-            transcript = result['results'][0]['alternatives'][0]['transcript']
-            confidence = result['results'][0]['alternatives'][0].get('confidence', 0.0)
-            
-            print(f"[STT] ✓ Transcription successful (Confidence: {confidence:.2%})")
-            print(f"[STT] Text: {transcript}")
-            
+
+            # Pick the result with highest confidence
+            best_result = max(results, key=lambda x: x['confidence'])
+
+            print(f"[STT] ✓ Best match: {best_result['language']} (Confidence: {best_result['confidence']:.2%})")
+            print(f"[STT] Text: {best_result['transcription']}")
+
             return {
                 'success': True,
-                'transcription': transcript,
-                'confidence': confidence,
-                'language': language_code
+                'transcription': best_result['transcription'],
+                'confidence': best_result['confidence'],
+                'language': best_result['language']
             }
             
         except FileNotFoundError:

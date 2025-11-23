@@ -97,6 +97,7 @@ async def api_info():
         "endpoints": {
             "POST /translate-voice": "Upload audio for bidirectional translation",
             "POST /translate-text": "Translate text in any direction",
+            "POST /speech-to-text": "Convert speech to text only (no translation)",
             "GET /health": "Check API health",
             "GET /download/{filename}": "Download generated audio files"
         }
@@ -336,35 +337,144 @@ async def translate_text(request: TranslateTextRequest):
         )
 
 
+@app.post("/speech-to-text", tags=["Speech"])
+async def speech_to_text(
+    file: UploadFile = File(...)
+):
+    """
+    Convert speech to text (supports any audio format)
+
+    **Parameters:**
+    - **file**: Audio file in any format (WAV, MP3, FLAC, WEBM, OGG, MP4, M4A) - Max 10MB
+
+    **Returns:**
+    - Transcribed text
+    - Confidence score
+    - Language detected
+    - Processing metadata
+
+    **Note:** Language is automatically detected from the audio
+    """
+
+    if pipeline is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Translation pipeline not initialized"
+        )
+
+    # Validate file
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="No file selected"
+        )
+
+    if not allowed_file(file.filename):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+
+    try:
+        # Save uploaded file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{timestamp}_stt.{file_extension}"
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+
+        # Save file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Check file size
+        file_size = os.path.getsize(file_path)
+        if file_size > MAX_FILE_SIZE:
+            os.remove(file_path)
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024)}MB"
+            )
+
+        print(f"[API] Speech-to-text file uploaded: {unique_filename} ({file_size / 1024:.2f} KB)")
+
+        # Process through speech-to-text with automatic language detection
+        start_time = datetime.now()
+        stt_result = pipeline.stt.transcribe_audio(file_path, language_code=None)
+        processing_time = (datetime.now() - start_time).total_seconds()
+
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+
+        # Prepare response
+        if stt_result['success']:
+            response = {
+                "success": True,
+                "text": stt_result['transcription'],
+                "confidence": stt_result['confidence'],
+                "language": stt_result['language'],
+                "processing_time": processing_time,
+                "timestamp": datetime.now().isoformat()
+            }
+
+            print(f"[API] ✓ Speech-to-text successful (Time: {processing_time:.2f}s)")
+
+            return JSONResponse(content=response, status_code=200)
+
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "message": "Speech-to-text failed",
+                    "error": stt_result['error'],
+                    "processing_time": processing_time
+                }
+            )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"[API] ✗ Error: {str(e)}")
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server error: {str(e)}"
+        )
+
+
 @app.get("/download/{filename}", tags=["Files"])
 async def download_file(filename: str):
     """
     Download generated audio files
-    
+
     **Parameters:**
     - **filename**: Name of the audio file to download
-    
+
     **Returns:**
     - Audio file (MP3 format)
     """
     try:
         file_path = os.path.join(OUTPUT_FOLDER, filename)
-        
+
         if not os.path.exists(file_path):
             raise HTTPException(
                 status_code=404,
                 detail="File not found"
             )
-        
+
         return FileResponse(
             path=file_path,
             media_type="audio/mpeg",
             filename=filename
         )
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
