@@ -804,19 +804,27 @@
                 message += `${sourceLangLabel}:\n${currentOriginalText}\n\n`;
                 message += `${targetLangLabel}:\n${currentTranslatedText}`;
 
-                // For WhatsApp sharing with text
-                const whatsappText = encodeURIComponent(message);
-
                 // Check if we're on mobile or desktop
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-                if (isMobile) {
-                    // Mobile: Try to use Web Share API with audio if available
-                    if (navigator.share && currentAudioUrl) {
+                // If we have audio, try to share it with text
+                if (currentAudioUrl) {
+                    console.log('Audio URL available:', currentAudioUrl);
+
+                    // Try Web Share API first (works on modern mobile browsers)
+                    if (navigator.share) {
                         try {
+                            console.log('Attempting Web Share API with audio...');
+                            showStatus('processing', 'Preparing audio for sharing...');
+
                             // Fetch the audio file
                             const audioResponse = await fetch(`${API_BASE_URL}${currentAudioUrl}`);
+                            if (!audioResponse.ok) {
+                                throw new Error('Failed to fetch audio file');
+                            }
+
                             const audioBlob = await audioResponse.blob();
+                            console.log('Audio blob size:', audioBlob.size, 'bytes');
 
                             // Get the filename from the URL
                             const fileName = currentAudioUrl.split('/').pop();
@@ -824,46 +832,77 @@
                             // Create a File object
                             const audioFile = new File([audioBlob], fileName, { type: 'audio/mpeg' });
 
-                            // Share using Web Share API
-                            await navigator.share({
-                                title: 'Voice Translation',
-                                text: message,
-                                files: [audioFile]
-                            });
+                            // Check if the browser supports sharing files
+                            if (navigator.canShare && navigator.canShare({ files: [audioFile] })) {
+                                console.log('Browser supports file sharing');
 
-                            showStatus('success', 'Shared to WhatsApp successfully!');
-                            return;
+                                // Share using Web Share API with both text and audio
+                                await navigator.share({
+                                    title: 'Voice Translation',
+                                    text: message,
+                                    files: [audioFile]
+                                });
+
+                                showStatus('success', 'Shared successfully!');
+                                return;
+                            } else {
+                                console.log('Browser does not support file sharing');
+                                throw new Error('File sharing not supported');
+                            }
                         } catch (shareError) {
-                            console.log('Web Share API failed, falling back to URL method:', shareError);
-                            // Fall back to URL method below
+                            console.log('Web Share API with files failed:', shareError.message);
+                            // Continue to fallback method
                         }
                     }
 
-                    // Mobile fallback: Open WhatsApp app with text only
-                    window.location.href = `whatsapp://send?text=${whatsappText}`;
-                    showStatus('info', 'Opening WhatsApp... Note: Audio file needs to be shared manually');
+                    // Fallback: Download audio + open WhatsApp
+                    console.log('Using fallback: download audio + WhatsApp');
+                    showStatus('info', 'Downloading audio file...');
+
+                    // Download the audio file first
+                    const audioResponse = await fetch(`${API_BASE_URL}${currentAudioUrl}`);
+                    const audioBlob = await audioResponse.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const fileName = currentAudioUrl.split('/').pop();
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = audioUrl;
+                    downloadLink.download = fileName;
+                    downloadLink.style.display = 'none';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    // Clean up the object URL after download
+                    setTimeout(() => URL.revokeObjectURL(audioUrl), 100);
+
+                    // Then open WhatsApp with text
+                    const whatsappText = encodeURIComponent(message);
+                    setTimeout(() => {
+                        if (isMobile) {
+                            window.location.href = `whatsapp://send?text=${whatsappText}`;
+                        } else {
+                            window.open(`https://web.whatsapp.com/send?text=${whatsappText}`, '_blank');
+                        }
+                        showStatus('success', 'Audio downloaded! WhatsApp opened. Now attach the audio file manually.');
+                    }, 500);
+
                 } else {
-                    // Desktop: Open WhatsApp Web with text
-                    window.open(`https://web.whatsapp.com/send?text=${whatsappText}`, '_blank');
+                    // No audio - share text only
+                    console.log('No audio available, sharing text only');
+                    const whatsappText = encodeURIComponent(message);
 
-                    if (currentAudioUrl) {
-                        showStatus('info', 'WhatsApp opened! Download the audio file separately to share it.');
-
-                        // Optionally download the audio file for the user
-                        setTimeout(() => {
-                            const link = document.createElement('a');
-                            link.href = `${API_BASE_URL}${currentAudioUrl}`;
-                            link.download = currentAudioUrl.split('/').pop();
-                            link.click();
-                        }, 1000);
+                    if (isMobile) {
+                        window.location.href = `whatsapp://send?text=${whatsappText}`;
                     } else {
-                        showStatus('success', 'WhatsApp opened with translation text!');
+                        window.open(`https://web.whatsapp.com/send?text=${whatsappText}`, '_blank');
                     }
+                    showStatus('success', 'WhatsApp opened with translation text!');
                 }
 
             } catch (error) {
                 console.error('WhatsApp share error:', error);
-                showStatus('error', 'Failed to share to WhatsApp: ' + error.message);
+                showStatus('error', 'Failed to share: ' + error.message);
             }
         }
 
