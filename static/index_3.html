@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indonesian Voice Translator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Language Selection Grid */
+        .language-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 15px;
+            background: #f5f7fa;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            align-items: start;
+        }
+
+        .language-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .column-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            text-align: center;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .lang-btn {
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .lang-btn:hover {
+            border-color: #FF6B6B;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+        }
+
+        .lang-btn.active {
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+
+        .arrow-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: #FF6B6B;
+            padding-top: 35px;
+        }
+
+        /* Record Button */
+        .record-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .record-button {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .record-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .record-button.recording {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            animation: pulse 1.5s infinite;
+        }
+
+        .record-button.processing {
+            background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
+            cursor: not-allowed;
+        }
+
+        .record-icon {
+            font-size: 48px;
+        }
+
+        .record-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 10px 30px rgba(255, 68, 68, 0.4);
+            }
+            50% {
+                box-shadow: 0 10px 50px rgba(255, 68, 68, 0.8);
+            }
+        }
+
+        /* Status Message */
+        .status {
+            text-align: center;
+            min-height: 60px;
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            display: none;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .status-message.processing {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        /* Result Display */
+        .result {
+            display: none;
+            background: #f5f7fa;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 20px;
+        }
+
+        .result-section:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-text {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.6;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #FF6B6B;
+        }
+
+        .result-text.translated {
+            border-left-color: #4ECDC4;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #FF6B6B;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* WhatsApp Share Button */
+        .whatsapp-button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .whatsapp-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4);
+        }
+
+        .whatsapp-button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);
+        }
+
+        .whatsapp-icon {
+            font-size: 24px;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: #f5f7fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .instructions h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            text-align: left;
+            padding-left: 20px;
+            color: #555;
+            font-size: 14px;
+            line-height: 2;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .language-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .arrow-divider {
+                display: none;
+            }
+
+            .column-label {
+                font-size: 12px;
+            }
+
+            .lang-btn {
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            .record-button {
+                width: 160px;
+                height: 160px;
+                font-size: 16px;
+            }
+
+            .record-icon {
+                font-size: 40px;
+            }
+        }
+
+        /* Audio Player (hidden) */
+        #audioPlayer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Voice Translator</h1>
+            <p>Indonesian, Bangla & English Translation</p>
+        </div>
+
+        <!-- Language Selection Grid -->
+        <div class="language-grid">
+            <!-- Source Language Column -->
+            <div class="language-column">
+                <div class="column-label">From</div>
+                <button class="lang-btn" id="btnSourceBangla" onclick="selectSourceLanguage('bn')">
+                    🇧🇩 Bangla
+                </button>
+                <button class="lang-btn" id="btnSourceEnglish" onclick="selectSourceLanguage('en')">
+                    🇬🇧 English
+                </button>
+                <button class="lang-btn active" id="btnSourceIndonesian" onclick="selectSourceLanguage('id')">
+                    🇮🇩 Indonesian
+                </button>
+            </div>
+
+            <!-- Arrow Divider -->
+            <div class="arrow-divider">→</div>
+
+            <!-- Target Language Column -->
+            <div class="language-column">
+                <div class="column-label">To</div>
+                <button class="lang-btn active" id="btnTargetBangla" onclick="selectTargetLanguage('bn')">
+                    🇧🇩 Bangla
+                </button>
+                <button class="lang-btn" id="btnTargetEnglish" onclick="selectTargetLanguage('en')">
+                    🇬🇧 English
+                </button>
+                <button class="lang-btn" id="btnTargetIndonesian" onclick="selectTargetLanguage('id')">
+                    🇮🇩 Indonesian
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div class="status">
+            <div class="status-message info active" id="statusMessage">
+                Select languages and press & hold to record
+            </div>
+        </div>
+
+        <!-- Record Button -->
+        <div class="record-section">
+            <button
+                class="record-button"
+                id="recordButton"
+                onmousedown="startRecording()"
+                onmouseup="stopRecording()"
+                ontouchstart="startRecording(event)"
+                ontouchend="stopRecording(event)"
+            >
+                <div class="record-icon" id="recordIcon">🎤</div>
+                <div class="record-text" id="recordText">Press & Hold</div>
+            </button>
+        </div>
+
+        <!-- Result Display -->
+        <div class="result" id="result">
+            <div class="result-section">
+                <div class="result-label" id="originalLabel">Original</div>
+                <div class="result-text" id="originalText">-</div>
+            </div>
+            <div class="result-section">
+                <div class="result-label" id="translatedLabel">Translation</div>
+                <div class="result-text translated" id="translatedText">-</div>
+            </div>
+
+            <!-- WhatsApp Share Button -->
+            <button class="whatsapp-button" id="whatsappButton" onclick="shareToWhatsApp()">
+                <span class="whatsapp-icon">📱</span>
+                <span>Share to WhatsApp</span>
+            </button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>How to Use</h3>
+            <ol>
+                <li>Select source language (left) and target language (right)</li>
+                <li>Press and hold the microphone button</li>
+                <li>Speak clearly in your language</li>
+                <li>Release to translate</li>
+                <li>Share via WhatsApp with audio and text</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Hidden Audio Player -->
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        let isRecording = false;
+        let isProcessing = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let currentSourceLang = 'id';  // Default: Indonesian
+        let currentTargetLang = 'bn';  // Default: Bangla
+        let currentAudioUrl = null;
+        let currentOriginalText = '';
+        let currentTranslatedText = '';
+
+        // Map language codes to API response keys
+        const langCodeToName = {
+            'bn': 'bangla',
+            'en': 'english',
+            'id': 'indonesian',
+            'bn-BD': 'bangla',
+            'en-US': 'english',
+            'id-ID': 'indonesian'
+        };
+
+        // Language display names
+        const langDisplayNames = {
+            'bn': 'Bangla',
+            'en': 'English',
+            'id': 'Indonesian'
+        };
+
+        // Select source language
+        function selectSourceLanguage(lang) {
+            currentSourceLang = lang;
+
+            // Update source button states
+            document.getElementById('btnSourceBangla').classList.remove('active');
+            document.getElementById('btnSourceEnglish').classList.remove('active');
+            document.getElementById('btnSourceIndonesian').classList.remove('active');
+
+            if (lang === 'bn') {
+                document.getElementById('btnSourceBangla').classList.add('active');
+            } else if (lang === 'en') {
+                document.getElementById('btnSourceEnglish').classList.add('active');
+            } else if (lang === 'id') {
+                document.getElementById('btnSourceIndonesian').classList.add('active');
+            }
+
+            updateStatus();
+            hideResult();
+        }
+
+        // Select target language
+        function selectTargetLanguage(lang) {
+            currentTargetLang = lang;
+
+            // Update target button states
+            document.getElementById('btnTargetBangla').classList.remove('active');
+            document.getElementById('btnTargetEnglish').classList.remove('active');
+            document.getElementById('btnTargetIndonesian').classList.remove('active');
+
+            if (lang === 'bn') {
+                document.getElementById('btnTargetBangla').classList.add('active');
+            } else if (lang === 'en') {
+                document.getElementById('btnTargetEnglish').classList.add('active');
+            } else if (lang === 'id') {
+                document.getElementById('btnTargetIndonesian').classList.add('active');
+            }
+
+            updateStatus();
+            hideResult();
+        }
+
+        // Update status message
+        function updateStatus() {
+            const sourceName = langDisplayNames[currentSourceLang];
+            const targetName = langDisplayNames[currentTargetLang];
+
+            // Check if source and target are the same
+            if (currentSourceLang === currentTargetLang) {
+                showStatus('error', `Please select different languages. You have selected ${sourceName} for both source and target.`);
+            } else {
+                showStatus('info', `${sourceName} → ${targetName}`);
+            }
+        }
+
+        // Start recording
+        async function startRecording(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (isProcessing || isRecording) {
+                return;
+            }
+
+            // Check if source and target languages are the same
+            if (currentSourceLang === currentTargetLang) {
+                showStatus('error', `Cannot translate ${langDisplayNames[currentSourceLang]} to ${langDisplayNames[currentTargetLang]}. Please select different languages.`);
+                return;
+            }
+
+            try {
+                console.log('Starting recording...');
+
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                });
+
+                // Create MediaRecorder
+                let options = { mimeType: 'audio/webm' };
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        options = { mimeType: 'audio/mp4' };
+                    } else {
+                        options = {};
+                    }
+                }
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    console.log('Recording stopped');
+
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+
+                    if (audioChunks.length > 0) {
+                        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+                        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+                        let extension = 'webm';
+                        if (mimeType.includes('mp4')) extension = 'mp4';
+                        else if (mimeType.includes('ogg')) extension = 'ogg';
+
+                        const audioFile = new File([audioBlob], `recording.${extension}`, { type: mimeType });
+
+                        // Auto-translate
+                        await translateAudio(audioFile);
+                    }
+                };
+
+                // Start recording
+                mediaRecorder.start();
+                isRecording = true;
+
+                // Update UI
+                const button = document.getElementById('recordButton');
+                const icon = document.getElementById('recordIcon');
+                const text = document.getElementById('recordText');
+
+                button.classList.add('recording');
+                icon.textContent = '🔴';
+                text.textContent = 'Recording...';
+
+                showStatus('info', 'Recording... Release to translate');
+
+            } catch (error) {
+                console.error('Microphone error:', error);
+
+                let errorMessage = 'Could not access microphone. ';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Please allow microphone access.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No microphone found.';
+                } else {
+                    errorMessage += error.message;
+                }
+
+                showStatus('error', errorMessage);
+            }
+        }
+
+        // Stop recording
+        function stopRecording(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (!isRecording) {
+                return;
+            }
+
+            console.log('Stopping recording...');
+
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            isRecording = false;
+
+            // Update UI
+            const button = document.getElementById('recordButton');
+            const icon = document.getElementById('recordIcon');
+            const text = document.getElementById('recordText');
+
+            button.classList.remove('recording');
+            button.classList.add('processing');
+            icon.textContent = '⏳';
+            text.textContent = 'Processing...';
+        }
+
+        // Translate audio
+        async function translateAudio(audioFile) {
+            isProcessing = true;
+            showStatus('processing', 'Translating your speech...');
+
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('source_language', currentSourceLang);
+            formData.append('target_languages', currentTargetLang);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/translate-voice`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('API Response:', data);
+
+                if (response.ok && data.success) {
+                    // Display results
+                    displayResults(data);
+
+                    // Auto-play translated audio
+                    const targetLangName = langCodeToName[currentTargetLang];
+                    console.log('Looking for audio with key:', targetLangName);
+                    console.log('Available audio files:', Object.keys(data.audio_files || {}));
+
+                    if (data.audio_files && data.audio_files[targetLangName]) {
+                        currentAudioUrl = data.audio_files[targetLangName].url;
+                        playAudio(currentAudioUrl);
+                    } else {
+                        console.warn('No audio file found for:', targetLangName);
+                        showStatus('success', 'Translation complete!');
+                    }
+                } else {
+                    let errorMsg = 'Translation failed';
+                    if (data.detail) {
+                        errorMsg += ': ' + (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail));
+                    }
+                    showStatus('error', errorMsg);
+                }
+            } catch (error) {
+                console.error('Translation error:', error);
+                showStatus('error', 'Network error. Make sure the server is running.');
+            } finally {
+                isProcessing = false;
+                resetButton();
+            }
+        }
+
+        // Display translation results
+        function displayResults(data) {
+            const originalText = document.getElementById('originalText');
+            const translatedText = document.getElementById('translatedText');
+            const originalLabel = document.getElementById('originalLabel');
+            const translatedLabel = document.getElementById('translatedLabel');
+            const result = document.getElementById('result');
+
+            console.log('Displaying results...');
+
+            // Set original text (transcription)
+            if (data.transcription) {
+                currentOriginalText = data.transcription.text;
+                originalText.textContent = currentOriginalText;
+                console.log('Original text:', currentOriginalText);
+                originalLabel.textContent = `Original (${langDisplayNames[currentSourceLang]})`;
+            }
+
+            // Set translated text using language name mapping
+            const targetLangName = langCodeToName[currentTargetLang];
+            console.log('Looking for translation with key:', targetLangName);
+            console.log('Available translations:', Object.keys(data.translations || {}));
+
+            if (data.translations && data.translations[targetLangName]) {
+                currentTranslatedText = data.translations[targetLangName];
+                translatedText.textContent = currentTranslatedText;
+                translatedLabel.textContent = `Translation (${langDisplayNames[currentTargetLang]})`;
+                console.log('Translated text:', currentTranslatedText);
+            } else {
+                console.warn('No translation found for:', targetLangName);
+                currentTranslatedText = 'Translation not available';
+                translatedText.textContent = currentTranslatedText;
+            }
+
+            // Show result
+            result.classList.add('active');
+        }
+
+        // Play audio
+        function playAudio(audioUrl) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = `${API_BASE_URL}${audioUrl}`;
+            audioPlayer.load();
+
+            audioPlayer.play()
+                .then(() => {
+                    console.log('Audio playing');
+                    showStatus('success', 'Translation complete! Audio playing...');
+                })
+                .catch(error => {
+                    console.error('Audio play error:', error);
+                    showStatus('success', 'Translation complete! (Tap to play audio)');
+
+                    // Add one-time click handler to play audio
+                    const playOnClick = () => {
+                        audioPlayer.play()
+                            .then(() => {
+                                showStatus('success', 'Audio playing...');
+                                document.removeEventListener('click', playOnClick);
+                            })
+                            .catch(err => console.error('Play failed:', err));
+                    };
+                    document.addEventListener('click', playOnClick);
+                });
+        }
+
+        // Reset button to initial state
+        function resetButton() {
+            const button = document.getElementById('recordButton');
+            const icon = document.getElementById('recordIcon');
+            const text = document.getElementById('recordText');
+
+            button.classList.remove('recording', 'processing');
+            icon.textContent = '🎤';
+            text.textContent = 'Press & Hold';
+        }
+
+        // Show status message
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = `status-message ${type} active`;
+
+            if (type === 'processing') {
+                statusEl.innerHTML = `<div class="spinner"></div>${message}`;
+            } else {
+                const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+                statusEl.textContent = `${icon} ${message}`;
+            }
+        }
+
+        // Hide result
+        function hideResult() {
+            document.getElementById('result').classList.remove('active');
+        }
+
+        // Share to WhatsApp
+        async function shareToWhatsApp() {
+            console.log('Sharing to WhatsApp...');
+
+            if (!currentOriginalText && !currentTranslatedText) {
+                showStatus('error', 'No translation to share. Please record something first.');
+                return;
+            }
+
+            try {
+                // Prepare the message text
+                const sourceLangLabel = document.getElementById('originalLabel').textContent;
+                const targetLangLabel = document.getElementById('translatedLabel').textContent;
+
+                let message = `🌐 *Voice Translation*\n\n`;
+                message += `${sourceLangLabel}:\n${currentOriginalText}\n\n`;
+                message += `${targetLangLabel}:\n${currentTranslatedText}`;
+
+                // Check if we're on mobile or desktop
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                // If we have audio, try to share it with text
+                if (currentAudioUrl) {
+                    console.log('Audio URL available:', currentAudioUrl);
+
+                    // Try Web Share API first (works on modern mobile browsers)
+                    if (navigator.share) {
+                        try {
+                            console.log('Attempting Web Share API with audio...');
+                            showStatus('processing', 'Preparing audio for sharing...');
+
+                            // Fetch the audio file
+                            const audioResponse = await fetch(`${API_BASE_URL}${currentAudioUrl}`);
+                            if (!audioResponse.ok) {
+                                throw new Error('Failed to fetch audio file');
+                            }
+
+                            const audioBlob = await audioResponse.blob();
+                            console.log('Audio blob size:', audioBlob.size, 'bytes');
+
+                            // Get the filename from the URL
+                            const fileName = currentAudioUrl.split('/').pop();
+
+                            // Create a File object
+                            const audioFile = new File([audioBlob], fileName, { type: 'audio/mpeg' });
+
+                            // Check if the browser supports sharing files
+                            if (navigator.canShare && navigator.canShare({ files: [audioFile] })) {
+                                console.log('Browser supports file sharing');
+
+                                // Share using Web Share API with both text and audio
+                                await navigator.share({
+                                    title: 'Voice Translation',
+                                    text: message,
+                                    files: [audioFile]
+                                });
+
+                                showStatus('success', 'Shared successfully!');
+                                return;
+                            } else {
+                                console.log('Browser does not support file sharing');
+                                throw new Error('File sharing not supported');
+                            }
+                        } catch (shareError) {
+                            console.log('Web Share API with files failed:', shareError.message);
+                            // Continue to fallback method
+                        }
+                    }
+
+                    // Fallback: Download audio + open WhatsApp
+                    console.log('Using fallback: download audio + WhatsApp');
+                    showStatus('info', 'Downloading audio file...');
+
+                    // Download the audio file first
+                    const audioResponse = await fetch(`${API_BASE_URL}${currentAudioUrl}`);
+                    const audioBlob = await audioResponse.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const fileName = currentAudioUrl.split('/').pop();
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = audioUrl;
+                    downloadLink.download = fileName;
+                    downloadLink.style.display = 'none';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    // Clean up the object URL after download
+                    setTimeout(() => URL.revokeObjectURL(audioUrl), 100);
+
+                    // Then open WhatsApp with text
+                    const whatsappText = encodeURIComponent(message);
+                    setTimeout(() => {
+                        if (isMobile) {
+                            window.location.href = `whatsapp://send?text=${whatsappText}`;
+                        } else {
+                            window.open(`https://web.whatsapp.com/send?text=${whatsappText}`, '_blank');
+                        }
+                        showStatus('success', 'Audio downloaded! WhatsApp opened. Now attach the audio file manually.');
+                    }, 500);
+
+                } else {
+                    // No audio - share text only
+                    console.log('No audio available, sharing text only');
+                    const whatsappText = encodeURIComponent(message);
+
+                    if (isMobile) {
+                        window.location.href = `whatsapp://send?text=${whatsappText}`;
+                    } else {
+                        window.open(`https://web.whatsapp.com/send?text=${whatsappText}`, '_blank');
+                    }
+                    showStatus('success', 'WhatsApp opened with translation text!');
+                }
+
+            } catch (error) {
+                console.error('WhatsApp share error:', error);
+                showStatus('error', 'Failed to share: ' + error.message);
+            }
+        }
+
+        // Prevent context menu on long press (mobile)
+        document.getElementById('recordButton').addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Initialize
+        console.log('=== Indonesian Voice Translator Initialized ===');
+        console.log('API Base URL:', API_BASE_URL);
+        console.log('Default: Indonesian → Bangla');
+        console.log('Supported languages: Bangla, English, Indonesian');
+        console.log('==============================================');
+
+        // Set initial status
+        updateStatus();
+    </script>
+</body>
+</html>

@@ -60,6 +60,7 @@ class TextToSpeech:
                     'en-US': 'en-US-Neural2-C',  # English female neural voice
                     'bn-IN': 'bn-IN-Standard-A',  # Bangla female standard voice
                     'zh-CN': 'cmn-CN-Wavenet-A',  # Chinese Mandarin female wavenet voice
+                    'id-ID': 'id-ID-Standard-A',  # Indonesian female standard voice
                 }
                 if language_code in default_voices:
                     voice_config["name"] = default_voices[language_code]
@@ -163,7 +164,9 @@ class TextToSpeech:
             'en': 'en-US',
             'bn': 'bn-IN',
             'zh': 'zh-CN',
-            'zh-CN': 'zh-CN'
+            'zh-CN': 'zh-CN',
+            'id': 'id-ID',
+            'id-ID': 'id-ID'
         }
         
         for lang_name, translation in translations_dict.items():

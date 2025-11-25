@@ -245,9 +245,9 @@ class SpeechToText:
 
             # Auto-detect language by trying all supported languages
             print(f"[STT] Language: Auto-detection enabled")
-            print(f"[STT] Trying languages: bn-BD, en-US, zh-CN")
+            print(f"[STT] Trying languages: bn-BD, en-US, zh-CN, id-ID")
 
-            languages_to_try = ['bn-BD', 'en-US', 'zh-CN']
+            languages_to_try = ['bn-BD', 'en-US', 'zh-CN', 'id-ID']
             results = []
 
             for lang in languages_to_try:

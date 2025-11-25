@@ -113,7 +113,9 @@ class Translator:
             'en': 'English',
             'en-US': 'English',
             'bn': 'Bangla',
-            'bn-IN': 'Bangla'
+            'bn-IN': 'Bangla',
+            'id': 'Indonesian',
+            'id-ID': 'Indonesian'
         }.get(source_language, source_language)
 
         print(f"\n[Translator] Translating {source_lang_name} text to {len(target_languages)} languages...")
@@ -129,7 +131,9 @@ class Translator:
                 'bn': 'bangla',
                 'bn-IN': 'bangla',
                 'zh': 'chinese',
-                'zh-CN': 'chinese'
+                'zh-CN': 'chinese',
+                'id': 'indonesian',
+                'id-ID': 'indonesian'
             }.get(lang, lang)
 
             print(f"\n[Translator] → Translating to {lang_name.capitalize()} ({lang})...")
